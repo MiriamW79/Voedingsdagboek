@@ -367,7 +367,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 var APP_WACHTWOORD = 'Trunks6-Eastward6-Empathy4-Giant3-Salami9'; // ← Verander dit!
 
 // Google Sheets webapp URL (na Apps Script deployment)
-var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx020XMboPmeFhYvDrD0pnvnhzxGWAFLQYTlS8BCtetBpjKuMjRyVPRMd_PCEIKZwanPQ/exec'; // ← Plak hier je URL na setup
+var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzokc6p0tjGlxhXfFiITJqMvxJqoYeNLgcLrw3hjMtZvanQIHvpaY3SdT9OLFv0aY0n-Q/exec'; // ← Plak hier je URL na setup
 
 // Wachtwoord voor Google Sheets API (moet overeenkomen met apps_script.js)
 var SHEETS_PW  = 'Trunks6-Eastward6-Empathy4-Giant3-Salami9'; // ← Zelfde als APP_WACHTWOORD of apart
@@ -694,10 +694,10 @@ function addEntry(){
   if(!db[k])db[k]=[];
   db[k].push({type:document.getElementById('f-type').value,time:document.getElementById('f-time').value,desc,por:document.getElementById('f-por').value,kcal:document.getElementById('f-kcal').value,ei:document.getElementById('f-ei').value,vez:document.getElementById('f-vez').value,vocht:document.getElementById('f-vocht').value,note:document.getElementById('f-note').value});
   const p=dv.find(x=>x.naam===desc);if(p&&p.por!==99)p.por=Math.max(0,p.por-1);
-  clrForm();upd();scheduleSync('saveDB',db);
+  clrForm();upd();scheduleSyncDB();
 }
 function clrForm(){['f-desc','f-por','f-kcal','f-ei','f-vez','f-vocht','f-note'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-warn').style.display='none';setT();}
-function delE(k,i){if(!confirm('Verwijder?'))return;db[k].splice(i,1);upd();scheduleSync('saveDB',db);}
+function delE(k,i){if(!confirm('Verwijder?'))return;db[k].splice(i,1);upd();scheduleSyncDB();}
 
 function pbar(v,mx,c){const p=Math.min(100,Math.round(v/mx*100));return `<div class="pbar"><div class="pfill" style="width:${p}%;background:${c}"></div></div>`;}
 
@@ -1030,6 +1030,27 @@ function scheduleSync(action,data){
   saveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
     var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action='+action+'&data='+encodeURIComponent(JSON.stringify(data));
+    var img=new Image();
+    img.onload=img.onerror=function(){
+      syncStatus.saving=false;
+      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      syncStatus.error=null;
+      showSyncBar();
+    };
+    img.src=url;
+  },1500);
+}
+
+// Dagboek sync: stuur alleen de gewijzigde dag (kleine data)
+function scheduleSyncDB(){
+  if(!SHEETS_URL)return;
+  var k=getTK();
+  var dagData={};
+  dagData[k]=db[k]||[];
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    syncStatus.saving=true;showSyncBar();
+    var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(JSON.stringify(dagData[k]));
     var img=new Image();
     img.onload=img.onerror=function(){
       syncStatus.saving=false;
