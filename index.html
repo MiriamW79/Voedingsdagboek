@@ -1008,7 +1008,9 @@ function loadFromSheets(){
     .then(function(data){
       syncStatus.loading=false;
       if(data.error){syncStatus.error=data.error;showSyncBar();return;}
+      // Sheets data wint altijd — START_DB alleen voor dagen die nog niet in Sheets staan
       if(data.db)      db=Object.assign({},START_DB,data.db);
+      else             db=Object.assign({},START_DB);
       if(data.gewicht&&data.gewicht.length)gewicht=data.gewicht;
       if(data.sport)   Object.assign(sprt,data.sport);
       if(data.dv&&data.dv.length)dv=data.dv;
@@ -1042,15 +1044,21 @@ function scheduleSync(action,data){
 }
 
 // Dagboek sync: stuur alleen de gewijzigde dag (kleine data)
+var dbSaveTimer=null;
 function scheduleSyncDB(){
   if(!SHEETS_URL)return;
   var k=getTK();
-  var dagData={};
-  dagData[k]=db[k]||[];
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(function(){
+  var entries=db[k]||[];
+  clearTimeout(dbSaveTimer);
+  dbSaveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
-    var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(JSON.stringify(dagData[k]));
+    var entries_json=JSON.stringify(entries);
+    var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(entries_json);
+    console.log('saveDAG URL lengte:',url.length,'entries:',entries.length,'datum:',k);
+    if(url.length>2000){
+      console.warn('URL te lang! ('+url.length+' tekens) — gebruik kortere omschrijvingen');
+      syncStatus.error='Invoer te lang voor sync ('+url.length+' tekens)';showSyncBar();return;
+    }
     var img=new Image();
     img.onload=img.onerror=function(){
       syncStatus.saving=false;
