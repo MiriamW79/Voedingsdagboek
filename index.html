@@ -998,43 +998,46 @@ function showSyncBar(){
   else if(syncStatus.lastSaved){bar.innerHTML='✅ Gesynchroniseerd om '+syncStatus.lastSaved+' <button onclick="loadFromSheets()" style="background:none;border:none;color:#27500A;cursor:pointer;font-size:11px;text-decoration:underline">↺ Vernieuwen</button>';bar.style.background='#EAF3DE';bar.style.borderBottom='1px solid #C0DD97';bar.style.color='#27500A';}
 }
 
-function sheetsCall(params,callback){
-  if(!SHEETS_URL)return;
-  params.pw=SHEETS_PW;
-  var url=SHEETS_URL+'?'+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&');
-  fetch(url).then(r=>r.json()).then(data=>callback(null,data)).catch(err=>callback(err.message,null));
-}
-
+// Laden via fetch (GET, JSON response)
 function loadFromSheets(){
   if(!SHEETS_URL)return;
   syncStatus.loading=true;syncStatus.error=null;showSyncBar();
-  sheetsCall({action:'load'},function(err,data){
-    syncStatus.loading=false;
-    if(err||data.error){syncStatus.error=err||data.error;showSyncBar();return;}
-    if(data.db)      db     =Object.assign({},START_DB,data.db);
-    if(data.gewicht&&data.gewicht.length)gewicht=data.gewicht;
-    if(data.sport)   Object.assign(sprt,data.sport);
-    if(data.dv&&data.dv.length)dv=data.dv;
-    if(data.vr&&data.vr.length)vr=data.vr;
-    syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-    showSyncBar();upd();
-    if(document.getElementById('panel-gewicht').classList.contains('active'))renderGewicht();
-    if(document.getElementById('panel-diepvries').classList.contains('active'))rdv();
-    if(document.getElementById('panel-voorraad').classList.contains('active'))rvr();
-  });
+  var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load';
+  fetch(url)
+    .then(r=>r.json())
+    .then(function(data){
+      syncStatus.loading=false;
+      if(data.error){syncStatus.error=data.error;showSyncBar();return;}
+      if(data.db)      db=Object.assign({},START_DB,data.db);
+      if(data.gewicht&&data.gewicht.length)gewicht=data.gewicht;
+      if(data.sport)   Object.assign(sprt,data.sport);
+      if(data.dv&&data.dv.length)dv=data.dv;
+      if(data.vr&&data.vr.length)vr=data.vr;
+      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      syncStatus.error=null;
+      showSyncBar();upd();
+      if(document.getElementById('panel-gewicht').classList.contains('active'))renderGewicht();
+      if(document.getElementById('panel-diepvries').classList.contains('active'))rdv();
+      if(document.getElementById('panel-voorraad').classList.contains('active'))rvr();
+    })
+    .catch(function(e){syncStatus.loading=false;syncStatus.error=e.message;showSyncBar();});
 }
 
+// Opslaan via Image-pixel trick (omzeilt CORS bij Google Apps Script)
 function scheduleSync(action,data){
   if(!SHEETS_URL)return;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
-    sheetsCall({action:action,data:JSON.stringify(data)},function(err,result){
+    var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action='+action+'&data='+encodeURIComponent(JSON.stringify(data));
+    var img=new Image();
+    img.onload=img.onerror=function(){
       syncStatus.saving=false;
-      if(err||(result&&result.error)){syncStatus.error=err||(result&&result.error);}
-      else{syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});syncStatus.error=null;}
+      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      syncStatus.error=null;
       showSyncBar();
-    });
+    };
+    img.src=url;
   },1500);
 }
 
