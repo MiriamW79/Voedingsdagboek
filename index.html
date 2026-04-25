@@ -140,8 +140,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <div><div class="lbl">Tijd</div><input type="time" id="f-time"></div>
       <div class="full srel">
         <div class="lbl">Omschrijving</div>
-        <input type="text" id="f-desc" placeholder="typ om te zoeken of vrij invullen..." autocomplete="off" oninput="showS()" onblur="hideS()">
+        <div style="display:flex;gap:6px">
+          <input type="text" id="f-desc" placeholder="typ om te zoeken of vrij invullen..." autocomplete="off" oninput="showS()" onblur="hideS()" style="flex:1">
+          <button class="btn btn-sm" onclick="zoekProductDB()" id="db-zoek-btn" style="white-space:nowrap">🔍 AI</button>
+        </div>
         <div id="s-drop" class="sdrop" style="display:none"></div>
+        <div id="db-zoek-status" style="font-size:12px;color:#888;min-height:16px;margin-top:4px"></div>
       </div>
       <div><div class="lbl">Portie</div><input type="text" id="f-por" placeholder="bijv. 1 portie"></div>
       <div><div class="lbl">Kcal</div><input type="number" id="f-kcal" placeholder="0" min="0"></div>
@@ -363,24 +367,43 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 //  CONFIGURATIE — pas dit aan voordat je deployt
 // ══════════════════════════════════════════════════════════
 
-// Wachtwoord dat de gebruiker moet invoeren om in te loggen
-var APP_WACHTWOORD = 'Trunks6-Eastward6-Empathy4-Giant3-Salami9'; // ← Verander dit!
+// Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
+// Stap 1: Ga naar https://emn178.github.io/online-tools/sha256.html
+// Stap 2: Typ je wachtwoord in en kopieer de hash
+// Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
+// Stap 4: Laat APP_WACHTWOORD leeg ('')
+var APP_WACHTWOORD_HASH = '10ca9c83daec33b2222e96cd642cae2b52ec359c61f7eeac916b5f00e1ce87d9'; // ← Plak hier je SHA-256 hash (64 tekens)
+var APP_WACHTWOORD = ''; // ← Fallback plaintext (leegmaken als hash werkt)
 
 // Google Sheets webapp URL (na Apps Script deployment)
 var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzokc6p0tjGlxhXfFiITJqMvxJqoYeNLgcLrw3hjMtZvanQIHvpaY3SdT9OLFv0aY0n-Q/exec'; // ← Plak hier je URL na setup
 
-// Wachtwoord voor Google Sheets API (moet overeenkomen met apps_script.js)
-var SHEETS_PW  = 'Trunks6-Eastward6-Empathy4-Giant3-Salami9'; // ← Zelfde als APP_WACHTWOORD of apart
+// Wachtwoord voor Google Sheets API — gebruik dezelfde hash als APP_WACHTWOORD_HASH
+// Zodat ook dit nergens als plaintext staat
+var SHEETS_PW  = '10ca9c83daec33b2222e96cd642cae2b52ec359c61f7eeac916b5f00e1ce87d9'; // ← Plak hier dezelfde SHA-256 hash als hierboven
 
 // ══════════════════════════════════════════════════════════
 //  WACHTWOORDSCHERM
 // ══════════════════════════════════════════════════════════
-function checkPW() {
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPW() {
   var inp = document.getElementById('lock-input').value;
-  if (inp === APP_WACHTWOORD) {
+  var ok = false;
+  // Controleer eerst met hash (veiliger)
+  if(APP_WACHTWOORD_HASH){
+    var hash = await sha256(inp);
+    ok = (hash === APP_WACHTWOORD_HASH.toLowerCase());
+  } else {
+    // Fallback naar plaintext
+    ok = (inp === APP_WACHTWOORD);
+  }
+  if (ok) {
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    // Sla in sessionStorage zodat refresh niet opnieuw vraagt
     try { sessionStorage.setItem('vd-auth', '1'); } catch(e){}
     initApp();
   } else {
@@ -658,19 +681,54 @@ function showS(){
   const q=document.getElementById('f-desc').value.toLowerCase();
   const dr=document.getElementById('s-drop');
   if(q.length<1){dr.style.display='none';return;}
-  const m=dv.filter(p=>p.naam.toLowerCase().includes(q));
+  // Zoek in diepvries
+  const mDV=dv.filter(p=>p.naam.toLowerCase().includes(q)).map(p=>({
+    naam:p.naam,cat:p.cat,label:p.bulk?(p.kcal100+' kcal/100g'):(p.kcal+' kcal'),
+    kcal:p.kcal,ei:p.ei,vez:p.vez||0,vocht:0,por:'1 portie',bron:'diepvries'
+  }));
+  // Zoek in voorraad (alleen producten met vaste portie of per 100g)
+  const mVR=vr.filter(p=>p.naam.toLowerCase().includes(q)).map(p=>({
+    naam:p.naam,cat:p.cat,
+    label:p.vaste_portie?(p.kcalPor+' kcal/portie'):(p.kcal100+' kcal/100g'),
+    kcal:p.vaste_portie?(p.kcalPor||0):0,
+    ei:p.vaste_portie?(p.eiPor||0):0,
+    vez:p.vaste_portie?(p.vezPor||0):0,
+    vocht:p.vaste_portie?(p.vochtPor||0):0,
+    por:p.vaste_portie?(p.por_omschrijving||'1 portie'):'',
+    bron:'voorraad'
+  }));
+  const m=[...mDV,...mVR];
   if(!m.length){dr.style.display='none';return;}
   dr.style.display='block';
-  dr.innerHTML=m.map(p=>`<div class="srow" onmousedown="selS('${p.naam}')"><span class="badge ${CC[p.cat]||'bg-gray'}">${p.cat}</span><span>${p.naam}</span><span style="font-size:11px;color:#888;margin-left:auto">${p.kcal} kcal</span></div>`).join('');
+  dr.innerHTML=m.map(p=>{
+    const bronBadge=p.bron==='voorraad'?'<span style="font-size:10px;color:#085041;background:#E1F5EE;border-radius:4px;padding:1px 5px;margin-left:4px">voorraad</span>':'';
+    return `<div class="srow" onmousedown="selS('${p.naam}','${p.bron}')"><span class="badge ${CC[p.cat]||'bg-gray'}">${p.cat}</span><span>${p.naam}${bronBadge}</span><span style="font-size:11px;color:#888;margin-left:auto">${p.label}</span></div>`;
+  }).join('');
 }
 function hideS(){setTimeout(()=>{document.getElementById('s-drop').style.display='none';},150);}
-function selS(n){
-  const p=dv.find(x=>x.naam===n);if(!p)return;
-  document.getElementById('f-desc').value=p.naam;
-  document.getElementById('f-kcal').value=p.kcal;
-  document.getElementById('f-ei').value=p.ei;
-  document.getElementById('f-vez').value=p.vez||0;
-  document.getElementById('f-por').value='1 portie';
+function selS(n,bron){
+  bron=bron||'diepvries';
+  var p=null;
+  if(bron==='voorraad'){
+    p=vr.find(x=>x.naam===n);
+    if(!p)return;
+    document.getElementById('f-desc').value=p.naam;
+    document.getElementById('f-kcal').value=p.vaste_portie?(p.kcalPor||0):0;
+    document.getElementById('f-ei').value=p.vaste_portie?(p.eiPor||0):0;
+    document.getElementById('f-vez').value=p.vaste_portie?(p.vezPor||0):0;
+    document.getElementById('f-vocht').value=p.vaste_portie?(p.vochtPor||0):0;
+    document.getElementById('f-por').value=p.vaste_portie?(p.por_omschrijving||'1 portie'):'';
+    document.getElementById('f-type').value='Ochtend drankje';
+  } else {
+    p=dv.find(x=>x.naam===n);
+    if(!p)return;
+    document.getElementById('f-desc').value=p.naam;
+    document.getElementById('f-kcal').value=p.kcal;
+    document.getElementById('f-ei').value=p.ei;
+    document.getElementById('f-vez').value=p.vez||0;
+    document.getElementById('f-vocht').value=0;
+    document.getElementById('f-por').value='1 portie';
+  }
   document.getElementById('s-drop').style.display='none';
 }
 
@@ -874,12 +932,32 @@ function rvr(){
   list.innerHTML=cats.map(cat=>`<div class="card"><div class="sec">${cat}</div>${vr.filter(p=>p.cat===cat).map(p=>{
     const ri=vr.indexOf(p);const stc=p.qty<=0?'bg-red':p.qty<=p.min?'bg-amber':'bg-green';const stT=p.qty<=0?'Op':p.qty<=p.min?'Bijna op':'Op voorraad';
     const pillsHTML=p.vaste_portie?`<div class="pills" style="margin-top:3px"><span class="pill">${p.kcalPor} kcal/portie</span>${p.eiPor?`<span class="pill">${p.eiPor}g eiwit</span>`:''} ${p.vochtPor?`<span class="pill">${p.vochtPor}ml vocht</span>`:''}<span class="pill" style="color:#085041;border-color:#9FE1CB">${p.por_omschrijving}</span></div>`:p.kcal100?`<div class="pills" style="margin-top:3px"><span class="pill">${p.kcal100} kcal/100g</span>${p.ei100?`<span class="pill">${p.ei100}g eiwit</span>`:''}${p.kh100?`<span class="pill">${p.kh100}g KH</span>`:''}${p.vet100?`<span class="pill">${p.vet100}g vet</span>`:''}${p.vez100?`<span class="pill">${p.vez100}g vezels</span>`:''}</div>`:'';
-    const dagboekBtn=p.vaste_portie?`<button class="btn btn-sm" onclick="vrNaarDagboek(${ri})">+ dagboek</button>`:'';
+    const dagboekBtn=`<button class="btn btn-sm" onclick="vrNaarDagboek(${ri})">+ dagboek</button>`;
     return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} ${p.gv==='ja'?'<span class="badge bg-teal" style="font-size:10px">GV</span>':''}</div><div style="font-size:12px;color:#888">${p.qty===99?'Altijd beschikbaar':p.qty+' '+p.unit}</div>${pillsHTML}</div><span class="badge ${stc}">${stT}</span><div class="qc" id="qc-vr-${ri}"></div>${dagboekBtn}<button class="btn btn-d btn-sm" onclick="delVr(${ri})">✕</button></div>`;
   }).join('')}</div>`).join('');
   vr.forEach((p,ri)=>{const el=document.getElementById('qc-vr-'+ri);if(!el)return;if(p.qty!==99){el.innerHTML='<button class="qb" onclick="vrQ('+ri+',-1)">-</button><span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">'+p.qty+'</span><button class="qb" onclick="vrQ('+ri+',1)">+</button>';}});
 }
-function vrNaarDagboek(ri){const p=vr[ri];st('dagboek');document.getElementById('f-desc').value=p.naam;document.getElementById('f-kcal').value=p.kcalPor||0;document.getElementById('f-ei').value=p.eiPor||0;document.getElementById('f-vez').value=p.vezPor||0;document.getElementById('f-vocht').value=p.vochtPor||0;document.getElementById('f-por').value=p.por_omschrijving||'1 portie';document.getElementById('f-type').value='Ochtend drankje';setT();}
+function vrNaarDagboek(ri){
+  const p=vr[ri];st('dagboek');
+  document.getElementById('f-desc').value=p.naam;
+  if(p.vaste_portie){
+    document.getElementById('f-kcal').value=p.kcalPor||0;
+    document.getElementById('f-ei').value=p.eiPor||0;
+    document.getElementById('f-vez').value=p.vezPor||0;
+    document.getElementById('f-vocht').value=p.vochtPor||0;
+    document.getElementById('f-por').value=p.por_omschrijving||'1 portie';
+    document.getElementById('f-type').value='Ochtend drankje';
+  } else {
+    // Per 100g product — vul 0 in, gebruiker past aan
+    document.getElementById('f-kcal').value=p.kcal100||0;
+    document.getElementById('f-ei').value=p.ei100||0;
+    document.getElementById('f-vez').value=p.vez100||0;
+    document.getElementById('f-vocht').value=0;
+    document.getElementById('f-por').value='100g';
+    document.getElementById('f-type').value='Tussendoortje';
+  }
+  setT();
+}
 function vrQ(i,d){vr[i].qty=Math.max(0,vr[i].qty+d);rvr();scheduleSync('saveVR',vr);}
 function delVr(i){if(!confirm('Verwijder?'))return;vr.splice(i,1);rvr();scheduleSync('saveVR',vr);}
 function addVr(){
@@ -909,6 +987,20 @@ async function zoekProductAI(query,statusElId){
     if(parsed.fout)throw new Error('Product niet gevonden — probeer een specifiekere naam of AH-URL');
     statusEl.textContent='';return parsed;
   }catch(e){statusEl.textContent='Fout: '+e.message;statusEl.style.color='#A32D2D';return null;}
+}
+
+async function zoekProductDB(){
+  const query=document.getElementById('f-desc').value.trim();
+  if(!query){alert('Typ eerst een productnaam in het omschrijvingsveld.');return;}
+  const btn=document.getElementById('db-zoek-btn');btn.disabled=true;btn.textContent='Bezig...';
+  const p=await zoekProductAI(query,'db-zoek-status');btn.disabled=false;btn.textContent='🔍 AI';
+  if(!p)return;
+  document.getElementById('f-desc').value=p.naam||query;
+  document.getElementById('f-kcal').value=p.kcal100||0;
+  document.getElementById('f-ei').value=p.ei100||0;
+  document.getElementById('f-vez').value=p.vez100||0;
+  document.getElementById('db-zoek-status').textContent='Gevonden! Waarden zijn per 100g — pas portie en kcal aan naar jouw hoeveelheid.';
+  document.getElementById('db-zoek-status').style.color='#27500A';
 }
 
 async function zoekProductVR(){
