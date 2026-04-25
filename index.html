@@ -8,6 +8,11 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f9f9f7;color:#1a1a1a;font-size:14px}
 
+/* ── BEWERK MODAL ── */
+#bewerk-modal{overflow-y:auto}
+#bewerk-modal > div{animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
 /* ── WACHTWOORDSCHERM ── */
 #lock-screen{position:fixed;inset:0;background:#f9f9f7;z-index:9999;display:flex;align-items:center;justify-content:center}
 .lock-card{background:#fff;border:1px solid #e8e8e2;border-radius:16px;padding:32px 28px;width:min(340px,90vw);text-align:center}
@@ -93,6 +98,21 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 
 <!-- ══ APP (verborgen tot ingelogd) ══ -->
 <div id="app" style="display:none">
+
+<!-- ══ BEWERK MODAL ══ -->
+<div id="bewerk-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:8000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:16px;width:min(480px,100%);max-height:90vh;overflow-y:auto;padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:15px;font-weight:600" id="bewerk-titel">Bewerken</div>
+      <button onclick="sluitModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">✕</button>
+    </div>
+    <div id="bewerk-inhoud"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-p" onclick="slaModalOp()">Opslaan</button>
+      <button class="btn" onclick="sluitModal()">Annuleren</button>
+    </div>
+  </div>
+</div>
 
 <div class="tabs">
   <button class="tab active" onclick="st('dagboek')">Dagboek</button>
@@ -287,7 +307,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
         <select id="p-cat"><option>Zuivel alternatief</option><option>Granen &amp; brood</option><option>Groenten</option><option>Fruit</option><option>Eiwitten</option><option>Sauzen &amp; kruiden</option><option>Snacks</option><option>Dranken</option><option>Overig</option></select>
       </div>
       <div><div class="lbl">Hoeveelheid</div><input type="number" id="p-qty" value="1" min="0"></div>
-      <div><div class="lbl">Eenheid</div><input type="text" id="p-unit" placeholder="stuks / liter"></div>
+      <div><div class="lbl">Eenheid</div>
+        <select id="p-unit">
+          <option value="stuks">stuks</option>
+          <option value="g">gram (g)</option>
+          <option value="kg">kilogram (kg)</option>
+          <option value="ml">milliliter (ml)</option>
+          <option value="l">liter (l)</option>
+          <option value="pak">pak</option>
+          <option value="blik">blik</option>
+          <option value="fles">fles</option>
+          <option value="zak">zak</option>
+          <option value="portie">portie</option>
+          <option value="brood">brood</option>
+          <option value="kuip">kuip</option>
+        </select>
+      </div>
       <div><div class="lbl">Min. voorraad</div><input type="number" id="p-min" value="1" min="0"></div>
       <div><div class="lbl">Glutenvrij</div>
         <select id="p-gv"><option value="ja">Ja</option><option value="nee">Nee</option><option value="onbekend">Onbekend</option></select>
@@ -890,6 +925,7 @@ function rr(){
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;flex-direction:column;align-items:flex-end">
         <button class="btn btn-g btn-sm" onclick="addReceptToDV(${ri})">+ Diepvries</button>
+        <button class="btn btn-sm" onclick="bewerkRecept(${ri})">✏️ Bewerken</button>
         <button class="btn btn-d btn-sm" onclick="delRecept(${ri})">Verwijder</button>
       </div>
     </div>
@@ -912,11 +948,11 @@ function rdv(){
   const cg=[...new Set(items.map(p=>p.cat))];
   list.innerHTML=cg.map(cat=>`<div class="card"><div class="sec">${cat}</div>${items.filter(p=>p.cat===cat).map(p=>{
     const ri=dv.indexOf(p);
-    if(p.bulk){return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} <span class="badge bg-blue" style="font-size:10px">per gram</span></div><div class="pills" style="margin-top:3px"><span class="pill">${p.kcal100} kcal/100g</span><span class="pill">${p.ei100}g eiwit/100g</span><span class="pill">${p.vez100}g vezels/100g</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="number" id="bulk-g-${ri}" value="50" min="1" max="500" step="1" style="width:70px;padding:4px 8px;font-size:13px" oninput="updateBulkPreview(${ri})"><span style="font-size:12px;color:#888">gram</span><span id="bulk-prev-${ri}" style="font-size:12px;color:#888;margin-left:4px"></span></div></div><button class="btn btn-sm" style="align-self:center" onclick="dvDBbulk(${ri})">+ dagboek</button></div>`;}
+    if(p.bulk){return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} <span class="badge bg-blue" style="font-size:10px">per gram</span></div><div class="pills" style="margin-top:3px"><span class="pill">${p.kcal100} kcal/100g</span><span class="pill">${p.ei100}g eiwit/100g</span><span class="pill">${p.vez100}g vezels/100g</span></div><div style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="number" id="bulk-g-${ri}" value="50" min="1" max="500" step="1" style="width:70px;padding:4px 8px;font-size:13px" oninput="updateBulkPreview(${ri})"><span style="font-size:12px;color:#888">gram</span><span id="bulk-prev-${ri}" style="font-size:12px;color:#888;margin-left:4px"></span></div></div><div style="display:flex;flex-direction:column;gap:4px;align-self:center"><button class="btn btn-sm" onclick="dvDBbulk(${ri})">+ dagboek</button><button class="btn btn-sm" onclick="bewerkDV(${ri})">✏️ bewerken</button></div></div>`;}
     const stc=p.por<=0?'bg-red':p.por===1?'bg-amber':'';const stT=p.por<=0?'Op':p.por===1?'Laatste':'';
     const stBadge=stT?'<span class="badge '+stc+'">'+stT+'</span>':'';
     return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} ${stBadge}</div><div class="pills" style="margin-top:3px"><span class="pill">${p.kcal} kcal</span><span class="pill">${p.ei}g eiwit</span><span class="pill">${p.vez}g vezels</span></div></div>
-    <div style="display:flex;align-items:center;gap:6px"><div class="qc"><button class="qb" onclick="dvQ(${ri},-1)">-</button><span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">${p.por===99?'∞':p.por}</span><button class="qb" onclick="dvQ(${ri},1)">+</button></div><button class="btn btn-sm" onclick="dvDB(${ri})">+ dagboek</button></div></div>`;
+    <div style="display:flex;align-items:center;gap:6px"><div class="qc"><button class="qb" onclick="dvQ(${ri},-1)">-</button><span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">${p.por===99?'∞':p.por}</span><button class="qb" onclick="dvQ(${ri},1)">+</button></div><button class="btn btn-sm" onclick="dvDB(${ri})">+ dagboek</button><button class="btn btn-sm" onclick="bewerkDV(${ri})" title="Bewerken">✏️</button></div></div>`;
   }).join('')}</div>`).join('');
   dv.forEach((p,ri)=>{if(p.bulk)updateBulkPreview(ri);});
 }
@@ -952,7 +988,7 @@ function rvr(){
     const ri=vr.indexOf(p);const stc=p.qty<=0?'bg-red':p.qty<=p.min?'bg-amber':'bg-green';const stT=p.qty<=0?'Op':p.qty<=p.min?'Bijna op':'Op voorraad';
     const pillsHTML=p.vaste_portie?`<div class="pills" style="margin-top:3px"><span class="pill">${p.kcalPor} kcal/portie</span>${p.eiPor?`<span class="pill">${p.eiPor}g eiwit</span>`:''} ${p.vochtPor?`<span class="pill">${p.vochtPor}ml vocht</span>`:''}<span class="pill" style="color:#085041;border-color:#9FE1CB">${p.por_omschrijving}</span></div>`:p.kcal100?`<div class="pills" style="margin-top:3px"><span class="pill">${p.kcal100} kcal/100g</span>${p.ei100?`<span class="pill">${p.ei100}g eiwit</span>`:''}${p.kh100?`<span class="pill">${p.kh100}g KH</span>`:''}${p.vet100?`<span class="pill">${p.vet100}g vet</span>`:''}${p.vez100?`<span class="pill">${p.vez100}g vezels</span>`:''}</div>`:'';
     const dagboekBtn=`<button class="btn btn-sm" onclick="vrNaarDagboek(${ri})">+ dagboek</button>`;
-    return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} ${p.gv==='ja'?'<span class="badge bg-teal" style="font-size:10px">GV</span>':''}</div><div style="font-size:12px;color:#888">${p.qty===99?'Altijd beschikbaar':p.qty+' '+p.unit}</div>${pillsHTML}</div><span class="badge ${stc}">${stT}</span><div class="qc" id="qc-vr-${ri}"></div>${dagboekBtn}<button class="btn btn-d btn-sm" onclick="delVr(${ri})">✕</button></div>`;
+    return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} ${p.gv==='ja'?'<span class="badge bg-teal" style="font-size:10px">GV</span>':''}</div><div style="font-size:12px;color:#888">${p.qty===99?'Altijd beschikbaar':p.qty+' '+p.unit}</div>${pillsHTML}</div><span class="badge ${stc}">${stT}</span><div class="qc" id="qc-vr-${ri}"></div>${dagboekBtn}<button class="btn btn-sm" onclick="bewerkVR(${ri})" title="Bewerken">✏️</button><button class="btn btn-d btn-sm" onclick="delVr(${ri})">✕</button></div>`;
   }).join('')}</div>`).join('');
   vr.forEach((p,ri)=>{const el=document.getElementById('qc-vr-'+ri);if(!el)return;if(p.qty!==99){el.innerHTML='<button class="qb" onclick="vrQ('+ri+',-1)">-</button><span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">'+p.qty+'</span><button class="qb" onclick="vrQ('+ri+',1)">+</button>';}});
 }
@@ -1194,6 +1230,158 @@ function scheduleSyncDB(){
     img.src=url;
   },1500);
 }
+
+// ── BEWERK MODAL ──
+var modalType = null;
+var modalIdx = null;
+
+function toonModal(){
+  var m = document.getElementById('bewerk-modal');
+  m.style.display = 'flex';
+}
+function sluitModal(){
+  document.getElementById('bewerk-modal').style.display = 'none';
+  modalType = null; modalIdx = null;
+}
+
+// Eenheid opties voor dropdown
+var EENHEDEN = ['stuks','g','kg','ml','l','pak','blik','fles','zak','portie','brood','kuip'];
+function eenheidSelect(val){
+  return '<select id="m-unit">'+EENHEDEN.map(e=>'<option value="'+e+'"'+(e===val?' selected':'')+'>'+e+'</option>').join('')+'</select>';
+}
+
+// ── DIEPVRIES BEWERKEN ──
+function bewerkDV(ri){
+  modalType='dv'; modalIdx=ri;
+  var p=dv[ri];
+  document.getElementById('bewerk-titel').textContent='Diepvries bewerken: '+p.naam;
+  var cats=['Soep','Maaltijd','Vlees','Smoothie','Ontbijt','Groenten','Overig'];
+  var catOpts=cats.map(c=>'<option value="'+c+'"'+(c===p.cat?' selected':'')+'>'+c+'</option>').join('');
+  document.getElementById('bewerk-inhoud').innerHTML=`
+    <div class="fgrid">
+      <div class="full"><div class="lbl">Naam</div><input type="text" id="m-naam" value="${p.naam}"></div>
+      <div><div class="lbl">Categorie</div><select id="m-cat">${catOpts}</select></div>
+      <div><div class="lbl">Porties</div><input type="number" id="m-por" value="${p.por===99?1:p.por}" min="0"></div>
+      <div><div class="lbl">Bulkproduct (per 100g)?</div>
+        <select id="m-bulk"><option value="nee"${!p.bulk?' selected':''}>Nee — vaste porties</option><option value="ja"${p.bulk?' selected':''}>Ja — per 100g</option></select>
+      </div>
+      <div><div class="lbl">Kcal${p.bulk?' /100g':''}</div><input type="number" id="m-kcal" value="${p.bulk?p.kcal100:p.kcal}"></div>
+      <div><div class="lbl">Eiwit (g)${p.bulk?' /100g':''}</div><input type="number" id="m-ei" value="${p.bulk?p.ei100:p.ei}"></div>
+      <div><div class="lbl">Vezels (g)${p.bulk?' /100g':''}</div><input type="number" id="m-vez" value="${p.bulk?p.vez100:p.vez}"></div>
+    </div>`;
+  toonModal();
+}
+
+// ── VOORRAAD BEWERKEN ──
+function bewerkVR(ri){
+  modalType='vr'; modalIdx=ri;
+  var p=vr[ri];
+  document.getElementById('bewerk-titel').textContent='Voorraad bewerken: '+p.naam;
+  var cats=['Zuivel alternatief','Granen & brood','Groenten','Fruit','Eiwitten','Sauzen & kruiden','Snacks','Dranken','Overig'];
+  var catOpts=cats.map(c=>'<option value="'+c+'"'+(c===p.cat?' selected':'')+'>'+c+'</option>').join('');
+  var gvOpts=['ja','nee','onbekend'].map(g=>'<option value="'+g+'"'+(g===p.gv?' selected':'')+'>'+g+'</option>').join('');
+  document.getElementById('bewerk-inhoud').innerHTML=`
+    <div class="fgrid">
+      <div class="full"><div class="lbl">Naam</div><input type="text" id="m-naam" value="${p.naam}"></div>
+      <div><div class="lbl">Categorie</div><select id="m-cat">${catOpts}</select></div>
+      <div><div class="lbl">Hoeveelheid</div><input type="number" id="m-qty" value="${p.qty===99?1:p.qty}" min="0"></div>
+      <div><div class="lbl">Eenheid</div>${eenheidSelect(p.unit)}</div>
+      <div><div class="lbl">Min. voorraad</div><input type="number" id="m-min" value="${p.min}" min="0"></div>
+      <div><div class="lbl">Glutenvrij</div><select id="m-gv">${gvOpts}</select></div>
+      <div><div class="lbl">Kcal /100g</div><input type="number" id="m-kcal100" value="${p.kcal100||0}"></div>
+      <div><div class="lbl">Eiwit /100g</div><input type="number" id="m-ei100" value="${p.ei100||0}"></div>
+      <div><div class="lbl">KH /100g</div><input type="number" id="m-kh100" value="${p.kh100||0}"></div>
+      <div><div class="lbl">Vet /100g</div><input type="number" id="m-vet100" value="${p.vet100||0}"></div>
+      <div><div class="lbl">Vezels /100g</div><input type="number" id="m-vez100" value="${p.vez100||0}"></div>
+    </div>`;
+  toonModal();
+}
+
+// ── RECEPT BEWERKEN ──
+function bewerkRecept(ri){
+  modalType='recept'; modalIdx=ri;
+  var r=recepten[ri];
+  document.getElementById('bewerk-titel').textContent='Recept bewerken: '+r.naam;
+  var cats=['Soep','Maaltijd','Vlees','Vis','Vegetarisch','Ontbijt','Snack','Overig'];
+  var catOpts=cats.map(c=>'<option value="'+c+'"'+(c===r.cat?' selected':'')+'>'+c+'</option>').join('');
+  var gvOpts=[{v:'ja',l:'Ja'},{v:'nee',l:'Nee'},{v:'check',l:'Controleer'}].map(g=>'<option value="'+g.v+'"'+(g.v===r.gv?' selected':'')+'>'+g.l+'</option>').join('');
+  var ingTekst=(r.ing||[]).join('\n');
+  var stapTekst=(r.stappen||[]).join('\n');
+  document.getElementById('bewerk-inhoud').innerHTML=`
+    <div class="fgrid">
+      <div class="full"><div class="lbl">Receptnaam</div><input type="text" id="m-naam" value="${r.naam}"></div>
+      <div><div class="lbl">Categorie</div><select id="m-cat">${catOpts}</select></div>
+      <div><div class="lbl">Porties</div><input type="number" id="m-porties" value="${r.porties||4}" min="1"></div>
+      <div><div class="lbl">Kcal per portie</div><input type="number" id="m-kcal" value="${r.kcal||0}"></div>
+      <div><div class="lbl">Eiwit per portie (g)</div><input type="number" id="m-ei" value="${r.ei||0}"></div>
+      <div><div class="lbl">Vezels per portie (g)</div><input type="number" id="m-vez" value="${r.vez||0}"></div>
+      <div><div class="lbl">Bereidingstijd</div><input type="text" id="m-tijd" value="${r.tijd||''}"></div>
+      <div><div class="lbl">Glutenvrij</div><select id="m-gv">${gvOpts}</select></div>
+      <div class="full"><div class="lbl">Ingrediënten (één per regel)</div><textarea id="m-ing" rows="5">${ingTekst}</textarea></div>
+      <div class="full"><div class="lbl">Bereiding (één stap per regel)</div><textarea id="m-stap" rows="5">${stapTekst}</textarea></div>
+      <div class="full"><div class="lbl">Tips</div><input type="text" id="m-tips" value="${r.tips||''}"></div>
+    </div>`;
+  toonModal();
+}
+
+// ── OPSLAAN ──
+function slaModalOp(){
+  if(modalType==='dv'){
+    var p=dv[modalIdx];
+    var isBulk=document.getElementById('m-bulk').value==='ja';
+    var kcalV=parseFloat(document.getElementById('m-kcal').value)||0;
+    var eiV=parseFloat(document.getElementById('m-ei').value)||0;
+    var vezV=parseFloat(document.getElementById('m-vez').value)||0;
+    p.naam=document.getElementById('m-naam').value.trim();
+    p.cat=document.getElementById('m-cat').value;
+    p.bulk=isBulk;
+    if(isBulk){
+      p.por=99; p.kcal100=kcalV; p.ei100=eiV; p.vez100=vezV;
+      p.kcal=kcalV; p.ei=eiV; p.vez=vezV;
+    } else {
+      p.por=parseInt(document.getElementById('m-por').value)||0;
+      p.kcal=kcalV; p.ei=eiV; p.vez=vezV;
+      delete p.kcal100; delete p.ei100; delete p.vez100;
+    }
+    sluitModal(); rdv(); scheduleSync('saveDV',dv);
+  }
+  else if(modalType==='vr'){
+    var p=vr[modalIdx];
+    p.naam=document.getElementById('m-naam').value.trim();
+    p.cat=document.getElementById('m-cat').value;
+    p.qty=parseInt(document.getElementById('m-qty').value)||0;
+    p.unit=document.getElementById('m-unit').value;
+    p.min=parseInt(document.getElementById('m-min').value)||1;
+    p.gv=document.getElementById('m-gv').value;
+    p.kcal100=parseFloat(document.getElementById('m-kcal100').value)||0;
+    p.ei100=parseFloat(document.getElementById('m-ei100').value)||0;
+    p.kh100=parseFloat(document.getElementById('m-kh100').value)||0;
+    p.vet100=parseFloat(document.getElementById('m-vet100').value)||0;
+    p.vez100=parseFloat(document.getElementById('m-vez100').value)||0;
+    sluitModal(); rvr(); scheduleSync('saveVR',vr);
+  }
+  else if(modalType==='recept'){
+    var r=recepten[modalIdx];
+    r.naam=document.getElementById('m-naam').value.trim();
+    r.cat=document.getElementById('m-cat').value;
+    r.porties=parseInt(document.getElementById('m-porties').value)||4;
+    r.kcal=parseFloat(document.getElementById('m-kcal').value)||0;
+    r.ei=parseFloat(document.getElementById('m-ei').value)||0;
+    r.vez=parseFloat(document.getElementById('m-vez').value)||0;
+    r.tijd=document.getElementById('m-tijd').value;
+    r.gv=document.getElementById('m-gv').value;
+    r.ing=document.getElementById('m-ing').value.split('\n').filter(x=>x.trim());
+    r.stappen=document.getElementById('m-stap').value.split('\n').filter(x=>x.trim());
+    r.tips=document.getElementById('m-tips').value;
+    sluitModal(); rr();
+  }
+}
+
+// Sluit modal bij klik buiten het venster
+document.addEventListener('click', function(e){
+  var m=document.getElementById('bewerk-modal');
+  if(m && e.target===m) sluitModal();
+});
 
 // ── START ──
 function initApp(){
