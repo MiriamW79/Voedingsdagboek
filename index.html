@@ -1215,33 +1215,22 @@ function addVr(){
   rvr();scheduleSync('saveVR',vr);
 }
 
-// ── OPEN FOOD FACTS ZOEKFUNCTIE (gratis, geen account nodig) ──
+// ── OPEN FOOD FACTS ZOEKFUNCTIE via Apps Script (omzeilt Safari CORS) ──
 async function zoekProductAI(query, statusElId){
   const statusEl=document.getElementById(statusElId);
   statusEl.textContent='Zoeken in Open Food Facts...';
   statusEl.style.color='#888';
   try{
-    const offUrl='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(query)+'&search_simple=1&action=process&json=1&page_size=5&lc=nl';
-    const proxies=[
-      offUrl,
-      'https://corsproxy.io/?'+encodeURIComponent(offUrl),
-      'https://api.allorigins.win/raw?url='+encodeURIComponent(offUrl),
-      'https://proxy.cors.sh/'+offUrl,
-    ];
-    let resp=null;
-    for(var pi=0;pi<proxies.length;pi++){
-      try{
-        resp=await fetch(proxies[pi],{headers:{'x-cors-api-key':'temp_demo'}});
-        if(resp&&resp.ok)break;
-      }catch(e){resp=null;}
-    }
-    if(!resp||!resp.ok)throw new Error('Verbinding mislukt — controleer je internetverbinding');
-    if(!resp.ok)throw new Error('Verbinding mislukt');
-    const data=await resp.json();
-    if(!data.products||!data.products.length)throw new Error('Niet gevonden — probeer een andere naam');
-    // Pak het eerste product met voedingswaarden
+    if(!SHEETS_URL) throw new Error('Google Sheets niet gekoppeld');
+    const url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=zoekOFF&q='+encodeURIComponent(query);
+    const resp=await fetch(url);
+    if(!resp.ok) throw new Error('Verbinding mislukt');
+    const wrapper=await resp.json();
+    if(wrapper.error) throw new Error(wrapper.error);
+    const data=wrapper.data;
+    if(!data.products||!data.products.length) throw new Error('Niet gevonden — probeer een andere naam');
     const p=data.products.find(x=>x.nutriments&&x.nutriments['energy-kcal_100g'])||data.products[0];
-    if(!p||!p.nutriments)throw new Error('Geen voedingswaarden gevonden voor dit product');
+    if(!p||!p.nutriments) throw new Error('Geen voedingswaarden gevonden voor dit product');
     const n=p.nutriments;
     const result={
       naam: p.product_name||p.product_name_nl||query,
@@ -1262,7 +1251,6 @@ async function zoekProductAI(query, statusElId){
     return null;
   }
 }
-
 async function zoekProductDB(){
   const query=document.getElementById('f-desc').value.trim();
   if(!query){alert('Typ eerst een productnaam in het omschrijvingsveld.');return;}
