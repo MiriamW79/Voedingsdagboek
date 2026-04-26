@@ -232,13 +232,32 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <div><div class="lbl">Categorie</div>
         <select id="r-cat"><option>Soep</option><option>Maaltijd</option><option>Vlees</option><option>Vis</option><option>Vegetarisch</option><option>Ontbijt</option><option>Snack</option><option>Overig</option></select>
       </div>
-      <div><div class="lbl">Aantal porties</div><input type="number" id="r-por" value="4" min="1"></div>
-      <div><div class="lbl">Kcal per portie</div><input type="number" id="r-kcal" placeholder="0"></div>
-      <div><div class="lbl">Eiwit per portie (g)</div><input type="number" id="r-ei" placeholder="0"></div>
-      <div><div class="lbl">Vezels per portie (g)</div><input type="number" id="r-vez" placeholder="0"></div>
+      <div><div class="lbl">Aantal porties</div><input type="number" id="r-por" value="4" min="1" onchange="berekenReceptTotaal()"></div>
       <div><div class="lbl">Bereidingstijd</div><input type="text" id="r-tijd" placeholder="bijv. 4-5 uur (slowcooker)"></div>
       <div><div class="lbl">Glutenvrij</div><select id="r-gv"><option value="ja">Ja</option><option value="nee">Nee</option><option value="check">Controleer</option></select></div>
-      <div class="full"><div class="lbl">Ingrediënten (één per regel, bijv: 500g kip)</div><textarea id="r-ing" rows="5" placeholder="500g sukadelappen&#10;200g wortel&#10;..."></textarea></div>
+      <div class="full" style="background:#f5f5f0;border-radius:8px;padding:10px;margin-top:4px">
+        <div class="sec" style="margin-bottom:8px">Ingrediënten met voedingswaarden</div>
+        <div id="r-ing-lijst"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <input type="text" id="r-ing-nieuw" placeholder="bijv. kipfilet, wortel, sojasaus..." style="flex:1;min-width:150px">
+          <input type="number" id="r-ing-gram" placeholder="gram" style="width:80px" min="1">
+          <button class="btn btn-sm" onclick="voegIngToe()">+ Voeg toe</button>
+          <button class="btn btn-sm" onclick="zoekIngOFF()" title="Zoek via Open Food Facts">🔍 Zoek</button>
+        </div>
+        <div id="r-ing-status" style="font-size:11px;color:#888;margin-top:4px;min-height:14px"></div>
+        <div style="font-size:11px;color:#888;margin-top:6px">Of voeg tekst-ingrediënten toe zonder voedingswaarden:</div>
+        <textarea id="r-ing-tekst" rows="2" placeholder="bijv. zout, peper, chilivlokken, 1 el honing..." style="margin-top:4px;font-size:12px"></textarea>
+      </div>
+      <div class="full">
+        <div style="background:#EAF3DE;border-radius:8px;padding:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+          <div style="font-size:12px;font-weight:600;color:#27500A">Totaal recept:</div>
+          <div style="font-size:12px;color:#27500A"><span id="r-tot-kcal">0</span> kcal</div>
+          <div style="font-size:12px;color:#27500A"><span id="r-tot-ei">0</span>g eiwit</div>
+          <div style="font-size:12px;color:#27500A"><span id="r-tot-vez">0</span>g vezels</div>
+          <div style="font-size:12px;color:#888">÷ <span id="r-tot-por">4</span> porties =</div>
+          <div style="font-size:13px;font-weight:600;color:#27500A"><span id="r-per-kcal">0</span> kcal / <span id="r-per-ei">0</span>g eiwit / <span id="r-per-vez">0</span>g vezels per portie</div>
+        </div>
+      </div>
       <div class="full"><div class="lbl">Bereiding (één stap per regel)</div><textarea id="r-stap" rows="6" placeholder="Snijd het vlees in stukken&#10;Leg ui en wortel onderin de slowcooker&#10;..."></textarea></div>
       <div class="full"><div class="lbl">Notities / tips</div><input type="text" id="r-tips" placeholder="bijv. bevriest goed, voeg oesterzwammen pas het laatste uur toe"></div>
     </div>
@@ -266,6 +285,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <button class="btn btn-p" onclick="zoekProductDV()" id="dv-zoek-btn">🔍 Zoeken</button>
     </div>
     <div id="dv-zoek-status" style="font-size:12px;color:#888;min-height:18px"></div>
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+      <a href="https://www.ah.nl/zoeken?query=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.ah.nl/zoeken?query='+encodeURIComponent(document.getElementById('dv-zoek-input').value)">🛒 Zoek op AH.nl</a>
+      <a href="https://www.voedingscentrum.nl/nl/zoeken.aspx?q=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.voedingscentrum.nl/nl/zoeken.aspx?q='+encodeURIComponent(document.getElementById('dv-zoek-input').value)">🥗 Voedingscentrum</a>
+    </div>
   </div>
   <div class="card" style="margin-top:8px">
     <div class="sec" style="margin-bottom:10px">Handmatig toevoegen</div>
@@ -298,6 +321,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <button class="btn btn-p" onclick="zoekProductVR()" id="vr-zoek-btn">🔍 Zoeken</button>
     </div>
     <div id="vr-zoek-status" style="font-size:12px;color:#888;min-height:18px"></div>
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+      <a href="https://www.ah.nl/zoeken?query=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.ah.nl/zoeken?query='+encodeURIComponent(document.getElementById('vr-zoek-input').value)">🛒 Zoek op AH.nl</a>
+      <a href="https://www.voedingscentrum.nl/nl/zoeken.aspx?q=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.voedingscentrum.nl/nl/zoeken.aspx?q='+encodeURIComponent(document.getElementById('vr-zoek-input').value)">🥗 Voedingscentrum</a>
+    </div>
   </div>
   <div class="card" style="margin-top:8px">
     <div class="sec" style="margin-bottom:10px">Handmatig toevoegen</div>
@@ -908,14 +935,139 @@ function addSport(){
 function delSport(k,i){if(!confirm('Verwijder?'))return;sprt[k].splice(i,1);rs();upd();scheduleSync('saveSP',sprt);}
 
 function toggleNieuwRecept(){const f=document.getElementById('nieuw-recept-form');f.style.display=f.style.display==='none'?'block':'none';}
+// Ingrediënten lijst voor nieuw recept
+var rIngLijst = [];
+
+function voegIngToe(){
+  var naam = document.getElementById('r-ing-nieuw').value.trim();
+  var gram = parseFloat(document.getElementById('r-ing-gram').value)||0;
+  if(!naam){alert('Vul een ingredientnaam in.');return;}
+  // Zoek in voorraad en diepvries voor bekende voedingswaarden
+  var gevonden = null;
+  var vrItem = vr.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
+  var dvItem = dv.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
+  if(vrItem && vrItem.kcal100){
+    gevonden = {kcal100:vrItem.kcal100,ei100:vrItem.ei100||0,vez100:vrItem.vez100||0};
+  } else if(dvItem && dvItem.bulk){
+    gevonden = {kcal100:dvItem.kcal100,ei100:dvItem.ei100||0,vez100:dvItem.vez100||0};
+  }
+  var kcal=0,ei=0,vez=0;
+  if(gevonden && gram>0){
+    kcal = Math.round(gevonden.kcal100*gram/100*10)/10;
+    ei   = Math.round(gevonden.ei100*gram/100*10)/10;
+    vez  = Math.round(gevonden.vez100*gram/100*10)/10;
+  }
+  rIngLijst.push({naam,gram,kcal,ei,vez,kcal100:gevonden?gevonden.kcal100:0,ei100:gevonden?gevonden.ei100:0,vez100:gevonden?gevonden.vez100:0});
+  document.getElementById('r-ing-nieuw').value='';
+  document.getElementById('r-ing-gram').value='';
+  renderIngLijst();
+  berekenReceptTotaal();
+}
+
+async function zoekIngOFF(){
+  var naam = document.getElementById('r-ing-nieuw').value.trim();
+  if(!naam){alert('Typ eerst een ingredientnaam.');return;}
+  var gram = parseFloat(document.getElementById('r-ing-gram').value)||100;
+  var statusEl = document.getElementById('r-ing-status');
+  statusEl.textContent='Zoeken...';statusEl.style.color='#888';
+  var p = await zoekProductAI(naam,'r-ing-status');
+  if(!p){return;}
+  var kcal = Math.round(p.kcal100*gram/100*10)/10;
+  var ei   = Math.round(p.ei100*gram/100*10)/10;
+  var vez  = Math.round(p.vez100*gram/100*10)/10;
+  rIngLijst.push({naam:p.naam||naam,gram,kcal,ei,vez,kcal100:p.kcal100||0,ei100:p.ei100||0,vez100:p.vez100||0});
+  document.getElementById('r-ing-nieuw').value='';
+  document.getElementById('r-ing-gram').value='';
+  statusEl.textContent='Toegevoegd: '+p.naam;statusEl.style.color='#27500A';
+  renderIngLijst();
+  berekenReceptTotaal();
+}
+
+function renderIngLijst(){
+  var el = document.getElementById('r-ing-lijst');
+  if(!rIngLijst.length){el.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 0">Nog geen ingrediënten toegevoegd.</div>';return;}
+  el.innerHTML = rIngLijst.map(function(ing,i){
+    var info = ing.gram ? ing.gram+'g' : '';
+    var macro = ing.kcal ? ' · '+ing.kcal+' kcal · '+ing.ei+'g eiwit' : ' · geen voedingswaarden';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #e8e8e2;font-size:12px">'
+      +'<div style="flex:1"><strong>'+ing.naam+'</strong>'+(info?' ('+info+')':'')+'<span style="color:#888">'+macro+'</span></div>'
+      +'<input type="number" value="'+(ing.gram||0)+'" style="width:60px;font-size:11px;padding:2px 4px" onchange="updateIngGram('+i+',this.value)" placeholder="g">'
+      +'<span style="font-size:10px;color:#888">g</span>'
+      +'<button class="btn btn-d btn-sm" onclick="verwijderIng('+i+')" style="padding:2px 6px">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function updateIngGram(i, gram){
+  gram = parseFloat(gram)||0;
+  rIngLijst[i].gram = gram;
+  if(rIngLijst[i].kcal100){
+    rIngLijst[i].kcal = Math.round(rIngLijst[i].kcal100*gram/100*10)/10;
+    rIngLijst[i].ei   = Math.round(rIngLijst[i].ei100*gram/100*10)/10;
+    rIngLijst[i].vez  = Math.round(rIngLijst[i].vez100*gram/100*10)/10;
+  }
+  renderIngLijst();
+  berekenReceptTotaal();
+}
+
+function verwijderIng(i){
+  rIngLijst.splice(i,1);
+  renderIngLijst();
+  berekenReceptTotaal();
+}
+
+function berekenReceptTotaal(){
+  var porties = parseInt(document.getElementById('r-por')&&document.getElementById('r-por').value)||4;
+  var totKcal = rIngLijst.reduce(function(s,x){return s+(x.kcal||0);},0);
+  var totEi   = rIngLijst.reduce(function(s,x){return s+(x.ei||0);},0);
+  var totVez  = rIngLijst.reduce(function(s,x){return s+(x.vez||0);},0);
+  var setEl = function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('r-tot-kcal', Math.round(totKcal*10)/10);
+  setEl('r-tot-ei',   Math.round(totEi*10)/10);
+  setEl('r-tot-vez',  Math.round(totVez*10)/10);
+  setEl('r-tot-por',  porties);
+  setEl('r-per-kcal', Math.round(totKcal/porties*10)/10);
+  setEl('r-per-ei',   Math.round(totEi/porties*10)/10);
+  setEl('r-per-vez',  Math.round(totVez/porties*10)/10);
+}
+
 function addRecept(){
-  const naam=document.getElementById('r-naam').value.trim();
+  var naam=document.getElementById('r-naam').value.trim();
   if(!naam){alert('Vul een receptnaam in.');return;}
-  const ing=document.getElementById('r-ing').value.split('\n').filter(x=>x.trim());
-  const stap=document.getElementById('r-stap').value.split('\n').filter(x=>x.trim());
-  recepten.push({naam,cat:document.getElementById('r-cat').value,porties:parseInt(document.getElementById('r-por').value)||4,kcal:parseFloat(document.getElementById('r-kcal').value)||0,ei:parseFloat(document.getElementById('r-ei').value)||0,vez:parseFloat(document.getElementById('r-vez').value)||0,tijd:document.getElementById('r-tijd').value,gv:document.getElementById('r-gv').value,ing,stappen:stap,tips:document.getElementById('r-tips').value});
-  ['r-naam','r-kcal','r-ei','r-vez','r-tijd','r-ing','r-stap','r-tips'].forEach(id=>document.getElementById(id).value='');
-  toggleNieuwRecept();rr();
+  var porties=parseInt(document.getElementById('r-por').value)||4;
+  var totKcal=rIngLijst.reduce(function(s,x){return s+(x.kcal||0);},0);
+  var totEi=rIngLijst.reduce(function(s,x){return s+(x.ei||0);},0);
+  var totVez=rIngLijst.reduce(function(s,x){return s+(x.vez||0);},0);
+  var stap=document.getElementById('r-stap').value.split('\n').filter(function(x){return x.trim();});
+  var teksting=document.getElementById('r-ing-tekst').value.split('\n').filter(function(x){return x.trim();});
+  // Combineer ingrediënten: gestructureerde + vrije tekst
+  var ingTekst=rIngLijst.map(function(x){return (x.gram?x.gram+'g ':'')+x.naam;}).concat(teksting);
+  recepten.push({
+    naam,
+    cat:document.getElementById('r-cat').value,
+    porties,
+    kcal:Math.round(totKcal/porties*10)/10,
+    ei:Math.round(totEi/porties*10)/10,
+    vez:Math.round(totVez/porties*10)/10,
+    totaalKcal:Math.round(totKcal*10)/10,
+    totaalEi:Math.round(totEi*10)/10,
+    totaalVez:Math.round(totVez*10)/10,
+    tijd:document.getElementById('r-tijd').value,
+    gv:document.getElementById('r-gv').value,
+    ing:ingTekst,
+    ingData:JSON.parse(JSON.stringify(rIngLijst)),
+    stappen:stap,
+    tips:document.getElementById('r-tips').value,
+  });
+  // Reset formulier
+  ['r-naam','r-tijd','r-stap','r-tips','r-ing-tekst','r-ing-nieuw','r-ing-gram'].forEach(function(id){
+    var e=document.getElementById(id);if(e)e.value='';
+  });
+  rIngLijst=[];
+  renderIngLijst();
+  berekenReceptTotaal();
+  toggleNieuwRecept();
+  rr();
 }
 function addReceptToDV(ri){
   const r=recepten[ri];
@@ -1240,7 +1392,7 @@ function scheduleSync(action,data){
   },1500);
 }
 
-// Dagboek sync: stuur alleen de gewijzigde dag (kleine data)
+// Dagboek sync: gebruik POST via no-cors (geen response maar data komt wel aan)
 var dbSaveTimer=null;
 function scheduleSyncDB(){
   if(!SHEETS_URL)return;
@@ -1250,20 +1402,37 @@ function scheduleSyncDB(){
   dbSaveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
     var entries_json=JSON.stringify(entries);
-    var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(entries_json);
-    console.log('saveDAG URL lengte:',url.length,'entries:',entries.length,'datum:',k);
-    if(url.length>2000){
-      console.warn('URL te lang! ('+url.length+' tekens) — gebruik kortere omschrijvingen');
-      syncStatus.error='Invoer te lang voor sync ('+url.length+' tekens)';showSyncBar();return;
-    }
-    var img=new Image();
-    img.onload=img.onerror=function(){
+    console.log('saveDAG entries:',entries.length,'datum:',k,'grootte:',entries_json.length,'tekens');
+    // Gebruik URLSearchParams voor form-encoded POST — werkt met no-cors
+    var params=new URLSearchParams();
+    params.append('pw', SHEETS_PW);
+    params.append('action', 'saveDAG');
+    params.append('datum', k);
+    params.append('data', entries_json);
+    fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: params.toString()
+    }).then(function(){
       syncStatus.saving=false;
       syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
       syncStatus.error=null;
       showSyncBar();
-    };
-    img.src=url;
+    }).catch(function(e){
+      // no-cors gooit altijd een error op de response, maar de request komt wel aan
+      // Probeer fallback via Image
+      console.log('POST fallback naar Image trick, fout:', e.message);
+      var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(entries_json);
+      var img=new Image();
+      img.onload=img.onerror=function(){
+        syncStatus.saving=false;
+        syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+        syncStatus.error=null;
+        showSyncBar();
+      };
+      img.src=url;
+    });
   },1500);
 }
 
@@ -1368,30 +1537,115 @@ function bewerkVR(ri){
 }
 
 // ── RECEPT BEWERKEN ──
+var modalIngLijst = [];
+
 function bewerkRecept(ri){
   modalType='recept'; modalIdx=ri;
   var r=recepten[ri];
+  modalIngLijst = JSON.parse(JSON.stringify(r.ingData||[]));
   document.getElementById('bewerk-titel').textContent='Recept bewerken: '+r.naam;
   var cats=['Soep','Maaltijd','Vlees','Vis','Vegetarisch','Ontbijt','Snack','Overig'];
   var catOpts=cats.map(c=>'<option value="'+c+'"'+(c===r.cat?' selected':'')+'>'+c+'</option>').join('');
   var gvOpts=[{v:'ja',l:'Ja'},{v:'nee',l:'Nee'},{v:'check',l:'Controleer'}].map(g=>'<option value="'+g.v+'"'+(g.v===r.gv?' selected':'')+'>'+g.l+'</option>').join('');
-  var ingTekst=(r.ing||[]).join('\n');
   var stapTekst=(r.stappen||[]).join('\n');
+  // Vrije tekst ingrediënten = ing minus de ingData namen
+  var ingDataNamen=(r.ingData||[]).map(function(x){return (x.gram?x.gram+'g ':'')+x.naam;});
+  var vrijeIng=(r.ing||[]).filter(function(x){return ingDataNamen.indexOf(x)===-1;}).join('\n');
+
   document.getElementById('bewerk-inhoud').innerHTML=`
     <div class="fgrid">
       <div class="full"><div class="lbl">Receptnaam</div><input type="text" id="m-naam" value="${r.naam}"></div>
       <div><div class="lbl">Categorie</div><select id="m-cat">${catOpts}</select></div>
-      <div><div class="lbl">Porties</div><input type="number" id="m-porties" value="${r.porties||4}" min="1"></div>
-      <div><div class="lbl">Kcal per portie</div><input type="number" id="m-kcal" value="${r.kcal||0}"></div>
-      <div><div class="lbl">Eiwit per portie (g)</div><input type="number" id="m-ei" value="${r.ei||0}"></div>
-      <div><div class="lbl">Vezels per portie (g)</div><input type="number" id="m-vez" value="${r.vez||0}"></div>
+      <div><div class="lbl">Porties</div><input type="number" id="m-porties" value="${r.porties||4}" min="1" onchange="herberMod()"></div>
       <div><div class="lbl">Bereidingstijd</div><input type="text" id="m-tijd" value="${r.tijd||''}"></div>
       <div><div class="lbl">Glutenvrij</div><select id="m-gv">${gvOpts}</select></div>
-      <div class="full"><div class="lbl">Ingrediënten (één per regel)</div><textarea id="m-ing" rows="5">${ingTekst}</textarea></div>
+      <div class="full" style="background:#f5f5f0;border-radius:8px;padding:10px">
+        <div class="sec" style="margin-bottom:6px">Ingrediënten met voedingswaarden</div>
+        <div id="m-ing-lijst"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <input type="text" id="m-ing-nieuw" placeholder="ingredientnaam..." style="flex:1;min-width:120px">
+          <input type="number" id="m-ing-gram" placeholder="gram" style="width:70px" min="1">
+          <button class="btn btn-sm" onclick="modalVoegIngToe()">+ Voeg toe</button>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px">Overige ingrediënten (zonder voedingswaarden):</div>
+        <textarea id="m-ing-tekst" rows="2" style="margin-top:4px;font-size:12px" placeholder="zout, peper...">${vrijeIng}</textarea>
+      </div>
+      <div class="full">
+        <div style="background:#EAF3DE;border-radius:8px;padding:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <div style="font-size:12px;font-weight:600;color:#27500A">Totaal:</div>
+          <div style="font-size:12px;color:#27500A" id="m-tot-info">—</div>
+          <div style="font-size:12px;color:#27500A" id="m-per-info">—</div>
+        </div>
+      </div>
       <div class="full"><div class="lbl">Bereiding (één stap per regel)</div><textarea id="m-stap" rows="5">${stapTekst}</textarea></div>
       <div class="full"><div class="lbl">Tips</div><input type="text" id="m-tips" value="${r.tips||''}"></div>
     </div>`;
+  renderModalIngLijst();
+  herberMod();
   toonModal();
+}
+
+function renderModalIngLijst(){
+  var el=document.getElementById('m-ing-lijst');
+  if(!el)return;
+  if(!modalIngLijst.length){el.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 0">Geen ingrediënten met voedingswaarden.</div>';return;}
+  el.innerHTML=modalIngLijst.map(function(ing,i){
+    var macro=ing.kcal?' · '+ing.kcal+' kcal · '+ing.ei+'g eiwit':' · geen waarden';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #e8e8e2;font-size:12px">'
+      +'<div style="flex:1"><strong>'+ing.naam+'</strong><span style="color:#888">'+macro+'</span></div>'
+      +'<input type="number" value="'+(ing.gram||0)+'" style="width:60px;font-size:11px;padding:2px 4px" onchange="updateModalIngGram('+i+',this.value)">'
+      +'<span style="font-size:10px;color:#888">g</span>'
+      +'<button class="btn btn-d btn-sm" onclick="verwijderModalIng('+i+')" style="padding:2px 6px">✕</button>'
+      +'</div>';
+  }).join('');
+}
+
+function updateModalIngGram(i,gram){
+  gram=parseFloat(gram)||0;
+  modalIngLijst[i].gram=gram;
+  if(modalIngLijst[i].kcal100){
+    modalIngLijst[i].kcal=Math.round(modalIngLijst[i].kcal100*gram/100*10)/10;
+    modalIngLijst[i].ei=Math.round(modalIngLijst[i].ei100*gram/100*10)/10;
+    modalIngLijst[i].vez=Math.round(modalIngLijst[i].vez100*gram/100*10)/10;
+  }
+  renderModalIngLijst();
+  herberMod();
+}
+
+function verwijderModalIng(i){
+  modalIngLijst.splice(i,1);
+  renderModalIngLijst();
+  herberMod();
+}
+
+function modalVoegIngToe(){
+  var naam=document.getElementById('m-ing-nieuw').value.trim();
+  var gram=parseFloat(document.getElementById('m-ing-gram').value)||0;
+  if(!naam)return;
+  var vrItem=vr.find(function(x){return x.naam.toLowerCase()===naam.toLowerCase();});
+  var dvItem=dv.find(function(x){return x.naam.toLowerCase()===naam.toLowerCase();});
+  var kcal100=0,ei100=0,vez100=0;
+  if(vrItem&&vrItem.kcal100){kcal100=vrItem.kcal100;ei100=vrItem.ei100||0;vez100=vrItem.vez100||0;}
+  else if(dvItem&&dvItem.bulk){kcal100=dvItem.kcal100;ei100=dvItem.ei100||0;vez100=dvItem.vez100||0;}
+  modalIngLijst.push({naam,gram,kcal100,ei100,vez100,
+    kcal:gram&&kcal100?Math.round(kcal100*gram/100*10)/10:0,
+    ei:gram&&ei100?Math.round(ei100*gram/100*10)/10:0,
+    vez:gram&&vez100?Math.round(vez100*gram/100*10)/10:0});
+  document.getElementById('m-ing-nieuw').value='';
+  document.getElementById('m-ing-gram').value='';
+  renderModalIngLijst();
+  herberMod();
+}
+
+function herberMod(){
+  var porties=parseInt(document.getElementById('m-porties')&&document.getElementById('m-porties').value)||4;
+  var totKcal=modalIngLijst.reduce(function(s,x){return s+(x.kcal||0);},0);
+  var totEi=modalIngLijst.reduce(function(s,x){return s+(x.ei||0);},0);
+  var totVez=modalIngLijst.reduce(function(s,x){return s+(x.vez||0);},0);
+  var ti=document.getElementById('m-tot-info');
+  var pi=document.getElementById('m-per-info');
+  if(ti)ti.textContent='Totaal: '+Math.round(totKcal)+' kcal · '+Math.round(totEi*10)/10+'g eiwit · '+Math.round(totVez*10)/10+'g vezels';
+  if(pi)pi.textContent='Per portie (÷'+porties+'): '+Math.round(totKcal/porties*10)/10+' kcal · '+Math.round(totEi/porties*10)/10+'g eiwit · '+Math.round(totVez/porties*10)/10+'g vezels';
 }
 
 // ── OPSLAAN ──
@@ -1446,16 +1700,26 @@ function slaModalOp(){
   }
   else if(modalType==='recept'){
     var r=recepten[modalIdx];
+    var porties=parseInt(document.getElementById('m-porties').value)||4;
+    var totKcal=modalIngLijst.reduce(function(s,x){return s+(x.kcal||0);},0);
+    var totEi=modalIngLijst.reduce(function(s,x){return s+(x.ei||0);},0);
+    var totVez=modalIngLijst.reduce(function(s,x){return s+(x.vez||0);},0);
+    var vrijeIng=document.getElementById('m-ing-tekst').value.split('\n').filter(function(x){return x.trim();});
+    var ingTekst=modalIngLijst.map(function(x){return (x.gram?x.gram+'g ':'')+x.naam;}).concat(vrijeIng);
     r.naam=document.getElementById('m-naam').value.trim();
     r.cat=document.getElementById('m-cat').value;
-    r.porties=parseInt(document.getElementById('m-porties').value)||4;
-    r.kcal=parseFloat(document.getElementById('m-kcal').value)||0;
-    r.ei=parseFloat(document.getElementById('m-ei').value)||0;
-    r.vez=parseFloat(document.getElementById('m-vez').value)||0;
+    r.porties=porties;
+    r.kcal=Math.round(totKcal/porties*10)/10;
+    r.ei=Math.round(totEi/porties*10)/10;
+    r.vez=Math.round(totVez/porties*10)/10;
+    r.totaalKcal=Math.round(totKcal*10)/10;
+    r.totaalEi=Math.round(totEi*10)/10;
+    r.totaalVez=Math.round(totVez*10)/10;
     r.tijd=document.getElementById('m-tijd').value;
     r.gv=document.getElementById('m-gv').value;
-    r.ing=document.getElementById('m-ing').value.split('\n').filter(x=>x.trim());
-    r.stappen=document.getElementById('m-stap').value.split('\n').filter(x=>x.trim());
+    r.ing=ingTekst;
+    r.ingData=JSON.parse(JSON.stringify(modalIngLijst));
+    r.stappen=document.getElementById('m-stap').value.split('\n').filter(function(x){return x.trim();});
     r.tips=document.getElementById('m-tips').value;
     sluitModal(); rr();
   }
