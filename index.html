@@ -1221,9 +1221,17 @@ async function zoekProductAI(query, statusElId){
   statusEl.textContent='Zoeken in Open Food Facts...';
   statusEl.style.color='#888';
   try{
-    // Zoek eerst op naam via Open Food Facts API
-    const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(query)+'&search_simple=1&action=process&json=1&page_size=5&lc=nl';
-    const resp=await fetch(url);
+    // Zoek via Open Food Facts — probeer direct, dan via CORS proxy als Safari blokkeert
+    const offUrl='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(query)+'&search_simple=1&action=process&json=1&page_size=5&lc=nl';
+    let resp;
+    try {
+      resp = await fetch(offUrl);
+      if(!resp.ok) throw new Error('direct mislukt');
+    } catch(e1) {
+      // Fallback via CORS proxy
+      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(offUrl);
+      resp = await fetch(proxyUrl);
+    }
     if(!resp.ok)throw new Error('Verbinding mislukt');
     const data=await resp.json();
     if(!data.products||!data.products.length)throw new Error('Niet gevonden — probeer een andere naam');
