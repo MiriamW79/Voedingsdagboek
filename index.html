@@ -152,7 +152,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     <div class="sec" style="margin-bottom:10px">Maaltijd toevoegen</div>
     <div class="fgrid">
       <div><div class="lbl">Type</div>
-        <select id="f-type">
+        <select id="f-type" onchange="herbereken()">
           <option>Ontbijt</option><option>Ochtend drankje</option><option>Lunch</option>
           <option>Diner</option><option>Tussendoortje</option><option>Drinken</option><option>Smoothie</option>
         </select>
@@ -754,10 +754,27 @@ function clearP100(){
 }
 
 function herbereken(){
-  if(!per100g) return; // geen per-100g product geselecteerd
   var por = document.getElementById('f-por').value.trim();
-  // Haal getal uit portie (bijv. "75g" → 75, "2" → 2)
-  var gram = parseFloat(por.replace(',','.'));
+  var getal = parseFloat(por.replace(',','.'));
+
+  // Automatisch vocht berekenen op basis van eenheid in portie
+  if(!isNaN(getal) && getal > 0){
+    var porLower = por.toLowerCase();
+    if(porLower.includes('l') && !porLower.includes('ml')){
+      // liters → ml
+      document.getElementById('f-vocht').value = Math.round(getal * 1000);
+    } else if(porLower.includes('ml')){
+      // milliliter
+      document.getElementById('f-vocht').value = Math.round(getal);
+    } else if(document.getElementById('f-type').value === 'Drinken' || document.getElementById('f-type').value === 'Smoothie'){
+      // Als type Drinken/Smoothie en getal zonder eenheid → behandel als ml
+      document.getElementById('f-vocht').value = Math.round(getal);
+    }
+  }
+
+  // Voedingswaarden herberekenen als per-100g product
+  if(!per100g) return;
+  var gram = getal;
   if(isNaN(gram)||gram<=0) return;
   document.getElementById('f-kcal').value = Math.round(per100g.kcal * gram / 100 * 10) / 10;
   document.getElementById('f-ei').value   = Math.round(per100g.ei   * gram / 100 * 10) / 10;
@@ -1153,10 +1170,14 @@ function vrNaarDagboek(ri){
     document.getElementById('f-kcal').value=p.kcal100||0;
     document.getElementById('f-ei').value=p.ei100||0;
     document.getElementById('f-vez').value=p.vez100||0;
-    document.getElementById('f-vocht').value=0;
-    document.getElementById('f-por').value='100g';
-    document.getElementById('f-type').value='Tussendoortje';
-    setP100(p.kcal100||0, p.ei100||0, p.vez100||0, 0);
+    // Automatisch vocht invullen op basis van eenheid
+    var eenheid=(p.unit||'').toLowerCase();
+    if(eenheid==='l')      document.getElementById('f-vocht').value=1000;
+    else if(eenheid==='ml') document.getElementById('f-vocht').value=100;
+    else                    document.getElementById('f-vocht').value=0;
+    document.getElementById('f-por').value='100'+((eenheid==='l'||eenheid==='ml')?'ml':'g');
+    document.getElementById('f-type').value=(eenheid==='l'||eenheid==='ml')?'Drinken':'Tussendoortje';
+    setP100(p.kcal100||0, p.ei100||0, p.vez100||0, eenheid==='l'?1000:eenheid==='ml'?100:0);
   }
   setT();
 }
