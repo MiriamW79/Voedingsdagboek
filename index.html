@@ -408,7 +408,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
 // Stap 4: Laat APP_WACHTWOORD leeg ('')
 var APP_WACHTWOORD_HASH = '10ca9c83daec33b2222e96cd642cae2b52ec359c61f7eeac916b5f00e1ce87d9'; // ← Plak hier je SHA-256 hash (64 tekens)
-var APP_WACHTWOORD = 'VulHierJeWachtwoordIn'; // ← Fallback plaintext (leegmaken als hash werkt)
+var APP_WACHTWOORD = ''; // ← Fallback plaintext (leegmaken als hash werkt)
 
 // Google Sheets webapp URL (na Apps Script deployment)
 var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzokc6p0tjGlxhXfFiITJqMvxJqoYeNLgcLrw3hjMtZvanQIHvpaY3SdT9OLFv0aY0n-Q/exec'; // ← Plak hier je URL na setup
@@ -688,7 +688,10 @@ function upd(){
           ${x.vocht?`<span class="pill">${x.vocht}ml vocht</span>`:''}
         </div>
       </div>
-      <button class="btn btn-d btn-sm" onclick="delE('${k}',${i})">✕</button>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <button class="btn btn-sm" onclick="bewerkEntry('${k}',${i})">✏️</button>
+        <button class="btn btn-d btn-sm" onclick="delE('${k}',${i})">✕</button>
+      </div>
     </div>`).join('');
   }
   const t=tots(k);
@@ -1264,6 +1267,40 @@ function scheduleSyncDB(){
   },1500);
 }
 
+// ── BEWERK DAGBOEK ENTRY ──
+function bewerkEntry(k, i){
+  modalType='entry'; modalIdx={k:k, i:i};
+  var x = db[k][i];
+  document.getElementById('bewerk-titel').textContent = 'Invoer bewerken';
+  var types = ['Ontbijt','Ochtend drankje','Lunch','Diner','Tussendoortje','Drinken','Smoothie'];
+  var typeOpts = types.map(t => '<option value="'+t+'"'+(t===x.type?' selected':'')+'>'+t+'</option>').join('');
+  document.getElementById('bewerk-inhoud').innerHTML = `
+    <div class="fgrid">
+      <div><div class="lbl">Type</div><select id="m-type">${typeOpts}</select></div>
+      <div><div class="lbl">Tijd</div><input type="time" id="m-time" value="${x.time||''}"></div>
+      <div class="full"><div class="lbl">Omschrijving</div><input type="text" id="m-desc" value="${x.desc||''}"></div>
+      <div><div class="lbl">Portie</div><input type="text" id="m-por" value="${x.por||''}" oninput="herbereken_modal()"></div>
+      <div><div class="lbl">Kcal</div><input type="number" id="m-kcal-e" value="${x.kcal||0}" step="0.1"></div>
+      <div><div class="lbl">Eiwit (g)</div><input type="number" id="m-ei-e" value="${x.ei||0}" step="0.1"></div>
+      <div><div class="lbl">Vezels (g)</div><input type="number" id="m-vez-e" value="${x.vez||0}" step="0.1"></div>
+      <div><div class="lbl">Vocht (ml)</div><input type="number" id="m-vocht-e" value="${x.vocht||0}"></div>
+      <div class="full"><div class="lbl">Notitie</div><input type="text" id="m-note-e" value="${x.note||''}"></div>
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:8px">Pas de portie aan — kcal en voedingswaarden worden alleen automatisch herberekend als het origineel per 100g was ingevoerd.</div>`;
+  toonModal();
+}
+
+// Herberekening vanuit modal (gebruikt zelfde per100g als het dagboekformulier)
+function herbereken_modal(){
+  if(!per100g) return;
+  var por = document.getElementById('m-por').value.trim();
+  var gram = parseFloat(por.replace(',','.'));
+  if(isNaN(gram)||gram<=0) return;
+  document.getElementById('m-kcal-e').value = Math.round(per100g.kcal * gram / 100 * 10) / 10;
+  document.getElementById('m-ei-e').value   = Math.round(per100g.ei   * gram / 100 * 10) / 10;
+  document.getElementById('m-vez-e').value  = Math.round(per100g.vez  * gram / 100 * 10) / 10;
+}
+
 // ── BEWERK MODAL ──
 var modalType = null;
 var modalIdx = null;
@@ -1392,6 +1429,20 @@ function slaModalOp(){
     p.vet100=parseFloat(document.getElementById('m-vet100').value)||0;
     p.vez100=parseFloat(document.getElementById('m-vez100').value)||0;
     sluitModal(); rvr(); scheduleSync('saveVR',vr);
+  }
+  else if(modalType==='entry'){
+    var k=modalIdx.k; var i=modalIdx.i;
+    var x=db[k][i];
+    x.type   = document.getElementById('m-type').value;
+    x.time   = document.getElementById('m-time').value;
+    x.desc   = document.getElementById('m-desc').value.trim();
+    x.por    = document.getElementById('m-por').value;
+    x.kcal   = document.getElementById('m-kcal-e').value;
+    x.ei     = document.getElementById('m-ei-e').value;
+    x.vez    = document.getElementById('m-vez-e').value;
+    x.vocht  = document.getElementById('m-vocht-e').value;
+    x.note   = document.getElementById('m-note-e').value;
+    sluitModal(); upd(); scheduleSyncDB();
   }
   else if(modalType==='recept'){
     var r=recepten[modalIdx];
