@@ -516,7 +516,7 @@ dv=[
 
 vr=[
   {naam:'Oatly Barista Edition Lighter Taste',cat:'Zuivel alternatief',qty:2,unit:'liter',min:1,gv:'ja',kcal100:52,ei100:1.1,kh100:7.0,vet100:2.1,vez100:0.8},
-  {naam:'Cappuccino (100ml Oatly + 45ml espresso)',cat:'Dranken',qty:99,unit:'kop',min:1,gv:'ja',kcal100:0,ei100:0,kh100:0,vet100:0,vez100:0,kcalPor:53,eiPor:1.1,vezPor:0.8,vochtPor:145,vaste_portie:true,por_omschrijving:'1 kop (145ml)'},
+  {naam:'Cappuccino (100ml Oatly + 45ml espresso)',cat:'Dranken',qty:10,unit:'kop',min:1,gv:'ja',kcal100:0,ei100:0,kh100:0,vet100:0,vez100:0,kcalPor:53,eiPor:1.1,vezPor:0.8,vochtPor:145,vaste_portie:true,por_omschrijving:'1 kop (145ml)'},
   {naam:'AH Glutenvrij Brood donker meerzaden half',cat:'Granen & brood',qty:1,unit:'brood (480g)',min:1,gv:'ja',kcal100:225,ei100:5.4,kh100:32,vet100:6.2,vez100:9.6},
   {naam:'Flower Farm Light (smeren)',cat:'Sauzen & kruiden',qty:1,unit:'kuip (375g)',min:1,gv:'ja',kcal100:320,ei100:0.1,kh100:0.5,vet100:35,vez100:1},
   {naam:'AH Biologisch Kipfilet',cat:'Eiwitten',qty:1,unit:'pak (100g)',min:1,gv:'ja',kcal100:120,ei100:18,kh100:4.1,vet100:3.5,vez100:0.1},
@@ -1172,12 +1172,17 @@ function rvr(){
   if(!vr.length){list.innerHTML='<div style="color:#888;font-size:13px;padding:10px 0">Geen producten.</div>';return;}
   const cats=[...new Set(vr.map(p=>p.cat))];
   list.innerHTML=cats.map(cat=>`<div class="card"><div class="sec">${cat}</div>${vr.filter(p=>p.cat===cat).map(p=>{
-    const ri=vr.indexOf(p);const stc=p.qty<=0?'bg-red':p.qty<=p.min?'bg-amber':'bg-green';const stT=p.qty<=0?'Op':p.qty<=p.min?'Bijna op':'Op voorraad';
+    const ri=vr.indexOf(p);const stc=p.qty<=0?'bg-red':p.qty<=p.min?'bg-amber':'bg-green';const stT=(p.qty===99&&!p.vaste_portie)?'':p.qty<=0?'Op':p.qty<=p.min?'Bijna op':'Op voorraad';
     const pillsHTML=p.vaste_portie?`<div class="pills" style="margin-top:3px"><span class="pill">${p.kcalPor} kcal/portie</span>${p.eiPor?`<span class="pill">${p.eiPor}g eiwit</span>`:''} ${p.vochtPor?`<span class="pill">${p.vochtPor}ml vocht</span>`:''}<span class="pill" style="color:#085041;border-color:#9FE1CB">${p.por_omschrijving}</span></div>`:p.kcal100?`<div class="pills" style="margin-top:3px"><span class="pill">${p.kcal100} kcal/100g</span>${p.ei100?`<span class="pill">${p.ei100}g eiwit</span>`:''}${p.kh100?`<span class="pill">${p.kh100}g KH</span>`:''}${p.vet100?`<span class="pill">${p.vet100}g vet</span>`:''}${p.vez100?`<span class="pill">${p.vez100}g vezels</span>`:''}</div>`:'';
     const dagboekBtn=`<button class="btn btn-sm" onclick="vrNaarDagboek(${ri})">+ dagboek</button>`;
-    return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} ${p.gv==='ja'?'<span class="badge bg-teal" style="font-size:10px">GV</span>':''}</div><div style="font-size:12px;color:#888">${p.qty===99?'Altijd beschikbaar':p.qty+' '+p.unit}</div>${pillsHTML}</div><span class="badge ${stc}">${stT}</span><div class="qc" id="qc-vr-${ri}"></div>${dagboekBtn}<button class="btn btn-sm" onclick="bewerkVR(${ri})" title="Bewerken">✏️</button><button class="btn btn-d btn-sm" onclick="delVr(${ri})">✕</button></div>`;
+    return `<div class="sitem"><div style="flex:1"><div style="font-size:13px;font-weight:600">${p.naam} ${p.gv==='ja'?'<span class="badge bg-teal" style="font-size:10px">GV</span>':''}</div><div style="font-size:12px;color:#888">${(p.qty===99&&!p.vaste_portie)?'Altijd beschikbaar':p.qty+' '+p.unit}</div>${pillsHTML}</div><span class="badge ${stc}">${stT}</span><div class="qc" id="qc-vr-${ri}"></div>${dagboekBtn}<button class="btn btn-sm" onclick="bewerkVR(${ri})" title="Bewerken">✏️</button><button class="btn btn-d btn-sm" onclick="delVr(${ri})">✕</button></div>`;
   }).join('')}</div>`).join('');
-  vr.forEach((p,ri)=>{const el=document.getElementById('qc-vr-'+ri);if(!el)return;if(p.qty!==99){el.innerHTML='<button class="qb" onclick="vrQ('+ri+',-1)">-</button><span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">'+p.qty+'</span><button class="qb" onclick="vrQ('+ri+',1)">+</button>';}});
+  vr.forEach((p,ri)=>{const el=document.getElementById('qc-vr-'+ri);if(!el)return;
+    // Toon +/- voor alle producten behalve niet-vaste producten met qty=99 (altijd beschikbaar)
+    if(p.qty!==99||p.vaste_portie){
+      el.innerHTML='<button class="qb" onclick="vrQ('+ri+',-1)">-</button><span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">'+p.qty+'</span><button class="qb" onclick="vrQ('+ri+',1)">+</button>';
+    }
+  });
 }
 function vrNaarDagboek(ri){
   const p=vr[ri];st('dagboek');
@@ -1523,7 +1528,7 @@ function bewerkVR(ri){
     <div class="fgrid">
       <div class="full"><div class="lbl">Naam</div><input type="text" id="m-naam" value="${p.naam}"></div>
       <div><div class="lbl">Categorie</div><select id="m-cat">${catOpts}</select></div>
-      <div><div class="lbl">Hoeveelheid</div><input type="number" id="m-qty" value="${p.qty===99?1:p.qty}" min="0"></div>
+      <div><div class="lbl">Hoeveelheid</div><input type="number" id="m-qty" value="${p.qty}" min="0"></div>
       <div><div class="lbl">Eenheid</div>${eenheidSelect(p.unit)}</div>
       <div><div class="lbl">Min. voorraad</div><input type="number" id="m-min" value="${p.min}" min="0"></div>
       <div><div class="lbl">Glutenvrij</div><select id="m-gv">${gvOpts}</select></div>
