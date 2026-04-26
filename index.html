@@ -160,12 +160,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <div><div class="lbl">Tijd</div><input type="time" id="f-time"></div>
       <div class="full srel">
         <div class="lbl">Omschrijving</div>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="f-desc" placeholder="typ om te zoeken of vrij invullen..." autocomplete="off" oninput="showS()" onblur="hideS()" style="flex:1">
-          <button class="btn btn-sm" onclick="zoekProductDB()" id="db-zoek-btn" style="white-space:nowrap">🔍 Zoeken</button>
-        </div>
+        <input type="text" id="f-desc" placeholder="typ om te zoeken of vrij invullen..." autocomplete="off" oninput="showS()" onblur="hideS()">
         <div id="s-drop" class="sdrop" style="display:none"></div>
-        <div id="db-zoek-status" style="font-size:12px;color:#888;min-height:16px;margin-top:4px"></div>
       </div>
       <div><div class="lbl">Portie</div><input type="text" id="f-por" placeholder="bijv. 1 portie" oninput="herbereken()"></div>
       <div><div class="lbl">Kcal</div><input type="number" id="f-kcal" placeholder="0" min="0"></div>
@@ -242,7 +238,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
           <input type="text" id="r-ing-nieuw" placeholder="bijv. kipfilet, wortel, sojasaus..." style="flex:1;min-width:150px">
           <input type="number" id="r-ing-gram" placeholder="gram" style="width:80px" min="1">
           <button class="btn btn-sm" onclick="voegIngToe()">+ Voeg toe</button>
-          <button class="btn btn-sm" onclick="zoekIngOFF()" title="Zoek via Open Food Facts">🔍 Zoek</button>
+
         </div>
         <div id="r-ing-status" style="font-size:11px;color:#888;margin-top:4px;min-height:14px"></div>
         <div style="font-size:11px;color:#888;margin-top:6px">Of voeg tekst-ingrediënten toe zonder voedingswaarden:</div>
@@ -277,19 +273,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
   <input type="text" id="dv-search" placeholder="zoek in diepvries..." oninput="rdv()" style="margin-bottom:10px">
   <div id="dv-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div id="dv-list"></div>
-  <div class="card" style="margin-top:12px">
-    <div class="sec" style="margin-bottom:6px">Product opzoeken via AI</div>
-    <div style="font-size:12px;color:#888;margin-bottom:10px;line-height:1.5">Typ een productnaam — de voedingswaarden worden automatisch opgezocht via Open Food Facts (gratis).</div>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      <input type="text" id="dv-zoek-input" placeholder="bijv. Heksenkaas light, kipfilet..." style="flex:1">
-      <button class="btn btn-p" onclick="zoekProductDV()" id="dv-zoek-btn">🔍 Zoeken</button>
-    </div>
-    <div id="dv-zoek-status" style="font-size:12px;color:#888;min-height:18px"></div>
-    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-      <a href="https://www.ah.nl/zoeken?query=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.ah.nl/zoeken?query='+encodeURIComponent(document.getElementById('dv-zoek-input').value)">🛒 Zoek op AH.nl</a>
-      <a href="https://www.voedingscentrum.nl/nl/zoeken.aspx?q=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.voedingscentrum.nl/nl/zoeken.aspx?q='+encodeURIComponent(document.getElementById('dv-zoek-input').value)">🥗 Voedingscentrum</a>
-    </div>
-  </div>
+
   <div class="card" style="margin-top:8px">
     <div class="sec" style="margin-bottom:10px">Handmatig toevoegen</div>
     <div class="fgrid">
@@ -313,19 +297,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 <div id="panel-voorraad" class="panel">
   <div style="font-size:15px;font-weight:600;margin-bottom:12px">Overige voorraad</div>
   <div id="vr-list"></div>
-  <div class="card" style="margin-top:8px">
-    <div class="sec" style="margin-bottom:6px">Product opzoeken via AI</div>
-    <div style="font-size:12px;color:#888;margin-bottom:10px;line-height:1.5">Typ een productnaam — de voedingswaarden worden automatisch opgezocht via Open Food Facts (gratis).</div>
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      <input type="text" id="vr-zoek-input" placeholder="bijv. Alpro haver drink, kwark..." style="flex:1">
-      <button class="btn btn-p" onclick="zoekProductVR()" id="vr-zoek-btn">🔍 Zoeken</button>
-    </div>
-    <div id="vr-zoek-status" style="font-size:12px;color:#888;min-height:18px"></div>
-    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-      <a href="https://www.ah.nl/zoeken?query=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.ah.nl/zoeken?query='+encodeURIComponent(document.getElementById('vr-zoek-input').value)">🛒 Zoek op AH.nl</a>
-      <a href="https://www.voedingscentrum.nl/nl/zoeken.aspx?q=" target="_blank" class="btn btn-sm" onclick="this.href='https://www.voedingscentrum.nl/nl/zoeken.aspx?q='+encodeURIComponent(document.getElementById('vr-zoek-input').value)">🥗 Voedingscentrum</a>
-    </div>
-  </div>
+
   <div class="card" style="margin-top:8px">
     <div class="sec" style="margin-bottom:10px">Handmatig toevoegen</div>
     <div class="fgrid">
@@ -964,24 +936,6 @@ function voegIngToe(){
   berekenReceptTotaal();
 }
 
-async function zoekIngOFF(){
-  var naam = document.getElementById('r-ing-nieuw').value.trim();
-  if(!naam){alert('Typ eerst een ingredientnaam.');return;}
-  var gram = parseFloat(document.getElementById('r-ing-gram').value)||100;
-  var statusEl = document.getElementById('r-ing-status');
-  statusEl.textContent='Zoeken...';statusEl.style.color='#888';
-  var p = await zoekProductAI(naam,'r-ing-status');
-  if(!p){return;}
-  var kcal = Math.round(p.kcal100*gram/100*10)/10;
-  var ei   = Math.round(p.ei100*gram/100*10)/10;
-  var vez  = Math.round(p.vez100*gram/100*10)/10;
-  rIngLijst.push({naam:p.naam||naam,gram,kcal,ei,vez,kcal100:p.kcal100||0,ei100:p.ei100||0,vez100:p.vez100||0});
-  document.getElementById('r-ing-nieuw').value='';
-  document.getElementById('r-ing-gram').value='';
-  statusEl.textContent='Toegevoegd: '+p.naam;statusEl.style.color='#27500A';
-  renderIngLijst();
-  berekenReceptTotaal();
-}
 
 function renderIngLijst(){
   var el = document.getElementById('r-ing-lijst');
@@ -1251,39 +1205,8 @@ async function zoekProductAI(query, statusElId){
     return null;
   }
 }
-async function zoekProductDB(){
-  const query=document.getElementById('f-desc').value.trim();
-  if(!query){alert('Typ eerst een productnaam in het omschrijvingsveld.');return;}
-  const btn=document.getElementById('db-zoek-btn');btn.disabled=true;btn.textContent='Zoeken...';
-  const p=await zoekProductAI(query,'db-zoek-status');btn.disabled=false;btn.textContent='🔍 Zoeken';
-  if(!p)return;
-  document.getElementById('f-desc').value=p.naam||query;
-  document.getElementById('f-kcal').value=p.kcal100||0;
-  document.getElementById('f-ei').value=p.ei100||0;
-  document.getElementById('f-vez').value=p.vez100||0;
-  document.getElementById('db-zoek-status').textContent='Gevonden ('+p.naam+')! Waarden zijn per 100g — pas portie en kcal aan naar jouw hoeveelheid.';
-  document.getElementById('db-zoek-status').style.color='#27500A';
-}
 
-async function zoekProductVR(){
-  const query=document.getElementById('vr-zoek-input').value.trim();if(!query)return;
-  const btn=document.getElementById('vr-zoek-btn');btn.disabled=true;btn.textContent='Bezig...';
-  const p=await zoekProductAI(query,'vr-zoek-status');btn.disabled=false;btn.textContent='Zoeken';
-  if(!p)return;
-  document.getElementById('p-naam').value=p.naam||query;document.getElementById('p-kcal100').value=p.kcal100||0;document.getElementById('p-ei100').value=p.ei100||0;document.getElementById('p-kh100').value=p.kh100||0;document.getElementById('p-vet100').value=p.vet100||0;document.getElementById('p-vez100').value=p.vez100||0;document.getElementById('p-unit').value=p.eenheid||'stuks';
-  if(p.glutenvrij)document.getElementById('p-gv').value=p.glutenvrij;
-  const catSel=document.getElementById('p-cat');for(let i=0;i<catSel.options.length;i++){if(catSel.options[i].value===p.categorie){catSel.value=p.categorie;break;}}
-  document.getElementById('vr-zoek-status').textContent='Gevonden ('+p.naam+')! Controleer de waarden en klik op Toevoegen.';document.getElementById('vr-zoek-status').style.color='#27500A';document.getElementById('vr-zoek-input').value='';
-}
 
-async function zoekProductDV(){
-  const query=document.getElementById('dv-zoek-input').value.trim();if(!query)return;
-  const btn=document.getElementById('dv-zoek-btn');btn.disabled=true;btn.textContent='Bezig...';
-  const p=await zoekProductAI(query,'dv-zoek-status');btn.disabled=false;btn.textContent='Zoeken';
-  if(!p)return;
-  document.getElementById('dv-naam').value=p.naam||query;document.getElementById('dv-kcal').value=p.kcal100||0;document.getElementById('dv-ei').value=p.ei100||0;document.getElementById('dv-vez').value=p.vez100||0;document.getElementById('dv-bulk').value='ja';
-  document.getElementById('dv-zoek-status').textContent='Gevonden ('+p.naam+')! Controleer de waarden en klik op Toevoegen.';document.getElementById('dv-zoek-status').style.color='#27500A';document.getElementById('dv-zoek-input').value='';
-}
 
 // ── GEWICHT ──
 let gwDagen=30,gwChart=null;
