@@ -1448,11 +1448,64 @@ function bewerkEntry(k, i){
   document.getElementById('bewerk-titel').textContent = 'Invoer bewerken';
   var types = ['Ontbijt','Ochtend drankje','Lunch','Diner','Tussendoortje','Drinken','Smoothie'];
   var typeOpts = types.map(t => '<option value="'+t+'"'+(t===x.type?' selected':'')+'>'+t+'</option>').join('');
+
+  // Zoek het bijbehorende voorraad- of diepvries-product voor herberekening
+  // Zoek product op naam (case-insensitief voor robuustheid)
+  var descLower = (x.desc||'').toLowerCase().trim();
+  var vrItem = vr.find(function(p){return p.naam.toLowerCase().trim()===descLower;});
+  var dvItem = dv.find(function(p){return p.naam.toLowerCase().trim()===descLower;});
+
+  // Debug: log wat gevonden is
+  console.log('bewerkEntry:', x.desc, '| vrItem:', vrItem?vrItem.naam:'niet gevonden', '| dvItem:', dvItem?dvItem.naam:'niet gevonden');
+  // Sla basiswaarden op voor herberekening
+  var heeftVastePor = vrItem && vrItem.vaste_portie;
+  var heeftPer100g  = (vrItem && vrItem.kcal100 && !vrItem.vaste_portie) || (dvItem && dvItem.bulk);
+
+  if(heeftVastePor){
+    // Sla per-portie waarden op zodat we kunnen vermenigvuldigen
+    window._modalVastePor = {
+      kcal: vrItem.kcalPor||0,
+      ei:   vrItem.eiPor||0,
+      vez:  vrItem.vezPor||0,
+      vocht:vrItem.vochtPor||0,
+      omschr: vrItem.por_omschrijving||'1 kop'
+    };
+  } else {
+    window._modalVastePor = null;
+  }
+
+  if(heeftPer100g){
+    var src = vrItem || dvItem;
+    setP100(src.kcal100||0, src.ei100||0, src.vez100||0, 0);
+  } else if(!heeftVastePor){
+    clearP100();
+  }
+
+  // Haal huidig aantal uit portie string (bijv. "2 kop (145ml)" → 2)
+  var huidigAantal = 1;
+  if(heeftVastePor){
+    var m = String(x.por||'').match(/^(\d+(?:[.,]\d+)?)/);
+    if(m) huidigAantal = parseFloat(m[1].replace(',','.'));
+  }
+
+  var aantalRij = heeftVastePor ? `
+      <div><div class="lbl">Aantal</div>
+        <input type="number" id="m-aantal" value="${huidigAantal}" min="0.5" step="0.5" oninput="herbereken_aantal()">
+      </div>
+      <div style="align-self:end;padding-bottom:4px;font-size:12px;color:#888">${window._modalVastePor.omschr} per stuk</div>` : '';
+
+  var porTip = heeftVastePor
+    ? 'Pas het aantal aan — kcal en voedingswaarden worden automatisch herberekend.'
+    : heeftPer100g
+      ? 'Pas de portie aan in gram — kcal en voedingswaarden worden automatisch herberekend.'
+      : 'Pas de waarden handmatig aan.';
+
   document.getElementById('bewerk-inhoud').innerHTML = `
     <div class="fgrid">
       <div><div class="lbl">Type</div><select id="m-type">${typeOpts}</select></div>
       <div><div class="lbl">Tijd</div><input type="time" id="m-time" value="${x.time||''}"></div>
       <div class="full"><div class="lbl">Omschrijving</div><input type="text" id="m-desc" value="${x.desc||''}"></div>
+      ${aantalRij}
       <div><div class="lbl">Portie</div><input type="text" id="m-por" value="${x.por||''}" oninput="herbereken_modal()"></div>
       <div><div class="lbl">Kcal</div><input type="number" id="m-kcal-e" value="${x.kcal||0}" step="0.1"></div>
       <div><div class="lbl">Eiwit (g)</div><input type="number" id="m-ei-e" value="${x.ei||0}" step="0.1"></div>
@@ -1460,8 +1513,21 @@ function bewerkEntry(k, i){
       <div><div class="lbl">Vocht (ml)</div><input type="number" id="m-vocht-e" value="${x.vocht||0}"></div>
       <div class="full"><div class="lbl">Notitie</div><input type="text" id="m-note-e" value="${x.note||''}"></div>
     </div>
-    <div style="font-size:11px;color:#888;margin-top:8px">Pas de portie aan — kcal en voedingswaarden worden alleen automatisch herberekend als het origineel per 100g was ingevoerd.</div>`;
+    <div style="font-size:11px;color:#888;margin-top:8px">${porTip}</div>`;
   toonModal();
+}
+
+// Herberekening op basis van aantal (voor vaste portie producten zoals cappuccino)
+function herbereken_aantal(){
+  var vp = window._modalVastePor;
+  if(!vp) return;
+  var aantal = parseFloat(document.getElementById('m-aantal').value)||1;
+  document.getElementById('m-kcal-e').value  = Math.round(vp.kcal  * aantal * 10) / 10;
+  document.getElementById('m-ei-e').value    = Math.round(vp.ei    * aantal * 10) / 10;
+  document.getElementById('m-vez-e').value   = Math.round(vp.vez   * aantal * 10) / 10;
+  document.getElementById('m-vocht-e').value = Math.round(vp.vocht * aantal);
+  // Pas ook portie tekst aan
+  document.getElementById('m-por').value = aantal === 1 ? vp.omschr : aantal + 'x ' + vp.omschr;
 }
 
 // Herberekening vanuit modal (gebruikt zelfde per100g als het dagboekformulier)
