@@ -418,10 +418,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
 // Stap 4: Laat APP_WACHTWOORD leeg ('')
 var APP_WACHTWOORD_HASH = '10ca9c83daec33b2222e96cd642cae2b52ec359c61f7eeac916b5f00e1ce87d9'; // ← Plak hier je SHA-256 hash (64 tekens)
-var APP_WACHTWOORD = 'https://script.google.com/macros/s/AKfycbzokc6p0tjGlxhXfFiITJqMvxJqoYeNLgcLrw3hjMtZvanQIHvpaY3SdT9OLFv0aY0n-Q/exec'; // ← Fallback plaintext (leegmaken als hash werkt)
+var APP_WACHTWOORD = ''; // ← Fallback plaintext (leegmaken als hash werkt)
 
 // Google Sheets webapp URL (na Apps Script deployment)
-var SHEETS_URL = ''; // ← Plak hier je URL na setup
+var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzokc6p0tjGlxhXfFiITJqMvxJqoYeNLgcLrw3hjMtZvanQIHvpaY3SdT9OLFv0aY0n-Q/exec'; // ← Plak hier je URL na setup
 
 // Wachtwoord voor Google Sheets API — gebruik dezelfde hash als APP_WACHTWOORD_HASH
 // Zodat ook dit nergens als plaintext staat
