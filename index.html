@@ -178,6 +178,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       </div>
       <div><div class="lbl">Kcal</div><input type="number" id="f-kcal" placeholder="0" min="0"></div>
       <div><div class="lbl">Eiwit (g)</div><input type="number" id="f-ei" placeholder="0" min="0"></div>
+      <div><div class="lbl">KH (g)</div><input type="number" id="f-kh" placeholder="0" min="0" step="0.1"></div>
+      <div><div class="lbl">Vet (g)</div><input type="number" id="f-vet" placeholder="0" min="0" step="0.1"></div>
       <div><div class="lbl">Vezels (g)</div><input type="number" id="f-vez" placeholder="0" min="0"></div>
       <div><div class="lbl">Vocht (ml)</div><input type="number" id="f-vocht" placeholder="0" min="0"></div>
       <div class="full"><div class="lbl">Notitie</div><input type="text" id="f-note" placeholder="hoe voelde je je erna?"></div>
@@ -244,26 +246,43 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <div><div class="lbl">Bereidingstijd</div><input type="text" id="r-tijd" placeholder="bijv. 4-5 uur (slowcooker)"></div>
       <div><div class="lbl">Glutenvrij</div><select id="r-gv"><option value="ja">Ja</option><option value="nee">Nee</option><option value="check">Controleer</option></select></div>
       <div class="full" style="background:#f5f5f0;border-radius:8px;padding:10px;margin-top:4px">
-        <div class="sec" style="margin-bottom:8px">Ingrediënten met voedingswaarden</div>
+        <div class="sec" style="margin-bottIngrediënten</div>
         <div id="r-ing-lijst"></div>
-        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-          <input type="text" id="r-ing-nieuw" placeholder="bijv. kipfilet, wortel, sojasaus..." style="flex:1;min-width:150px">
-          <input type="number" id="r-ing-gram" placeholder="gram" style="width:80px" min="1">
-          <button class="btn btn-sm" onclick="voegIngToe()">+ Voeg toe</button>
-
+        <div style="border-top:1px solid #e8e8e2;margin-top:8px;padding-top:8px">
+          <div class="lbl" style="margin-bottom:6px">Ingrediënt toevoegen</div>
+          <div class="fgrid" style="gap:6px">
+            <div class="full srel">
+              <input type="text" id="r-ing-nieuw" placeholder="typ om te zoeken in voorraad/diepvries of vrij invullen..." autocomplete="off" oninput="zoekRIngredient()" onblur="hideRIngDrop()">
+              <div id="r-ing-drop" class="sdrop" style="display:none"></div>
+            </div>
+            <div><div class="lbl">Hoeveelheid</div><input type="number" id="r-ing-gram" placeholder="100" min="0" step="any"></div>
+            <div><div class="lbl">Eenheid</div>
+              <select id="r-ing-eenheid">
+                <option value="g">gram (g)</option>
+                <option value="ml">milliliter (ml)</option>
+                <option value="l">liter (l)</option>
+                <option value="kg">kilogram (kg)</option>
+                <option value="stuks">stuks</option>
+                <option value="el">eetlepel (el)</option>
+                <option value="tl">theelepel (tl)</option>
+                <option value="portie">portie</option>
+              </select>
+            </div>
+            <div><div class="lbl">Kcal /100g of /portie</div><input type="number" id="r-ing-kcal" placeholder="0" min="0"></div>
+            <div><div class="lbl">Eiwit (g)</div><input type="number" id="r-ing-ei" placeholder="0" min="0"></div>
+            <div><div class="lbl">KH (g)</div><input type="number" id="r-ing-kh" placeholder="0" min="0"></div>
+            <div><div class="lbl">Vet (g)</div><input type="number" id="r-ing-vet" placeholder="0" min="0"></div>
+            <div><div class="lbl">Vezels (g)</div><input type="number" id="r-ing-vez" placeholder="0" min="0"></div>
+            <div class="full" style="display:flex;gap:6px;align-items:center">
+              <button class="btn btn-sm btn-p" onclick="voegIngToe()">+ Toevoegen</button>
+              <button class="btn btn-sm" onclick="clrRIng()">Wissen</button>
+              <span id="r-ing-status" style="font-size:11px;color:#888"></span>
+            </div>
+          </div>
         </div>
-        <div id="r-ing-status" style="font-size:11px;color:#888;margin-top:4px;min-height:14px"></div>
-        <div style="font-size:11px;color:#888;margin-top:6px">Of voeg tekst-ingrediënten toe zonder voedingswaarden:</div>
-        <textarea id="r-ing-tekst" rows="2" placeholder="bijv. zout, peper, chilivlokken, 1 el honing..." style="margin-top:4px;font-size:12px"></textarea>
-      </div>
-      <div class="full">
-        <div style="background:#EAF3DE;border-radius:8px;padding:10px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-          <div style="font-size:12px;font-weight:600;color:#27500A">Totaal recept:</div>
-          <div style="font-size:12px;color:#27500A"><span id="r-tot-kcal">0</span> kcal</div>
-          <div style="font-size:12px;color:#27500A"><span id="r-tot-ei">0</span>g eiwit</div>
-          <div style="font-size:12px;color:#27500A"><span id="r-tot-vez">0</span>g vezels</div>
-          <div style="font-size:12px;color:#888">÷ <span id="r-tot-por">4</span> porties =</div>
-          <div style="font-size:13px;font-weight:600;color:#27500A"><span id="r-per-kcal">0</span> kcal / <span id="r-per-ei">0</span>g eiwit / <span id="r-per-vez">0</span>g vezels per portie</div>
+        <div style="margin-top:8px">
+          <div class="lbl">Overige ingrediënten zonder voedingswaarden</div>
+          <textarea id="r-ing-tekst" rows="2" placeholder="zout, peper, 1 el honing..." style="font-size:12px"></textarea>
         </div>
       </div>
       <div class="full"><div class="lbl">Bereiding (één stap per regel)</div><textarea id="r-stap" rows="6" placeholder="Snijd het vlees in stukken&#10;Leg ui en wortel onderin de slowcooker&#10;..."></textarea></div>
@@ -707,6 +726,8 @@ function upd(){
           ${x.kcal?`<span class="pill">${Math.round(parseFloat(x.kcal)*10)/10} kcal</span>`:''}
           ${x.ei?`<span class="pill">${Math.round(parseFloat(x.ei)*10)/10}g eiwit</span>`:''}
           ${x.vez?`<span class="pill">${Math.round(parseFloat(x.vez)*10)/10}g vezels</span>`:''}
+          ${x.kh?`<span class="pill">${Math.round(parseFloat(x.kh)*10)/10}g KH</span>`:''}
+          ${x.vet?`<span class="pill">${Math.round(parseFloat(x.vet)*10)/10}g vet</span>`:''}
           ${x.vocht?`<span class="pill">${x.vocht}ml vocht</span>`:''}
         </div>
       </div>
@@ -910,11 +931,11 @@ function addEntry(){
   if(ws.length){wb.style.display='block';wb.innerHTML=ws.join('<br>');if(!confirm('Waarschuwingen:\n\n'+ws.join('\n')+'\n\nToch toevoegen?'))return;}
   else wb.style.display='none';
   if(!db[k])db[k]=[];
-  db[k].push({type:document.getElementById('f-type').value,time:document.getElementById('f-time').value,desc,por:document.getElementById('f-por').value,kcal:document.getElementById('f-kcal').value,ei:document.getElementById('f-ei').value,vez:document.getElementById('f-vez').value,vocht:document.getElementById('f-vocht').value,note:document.getElementById('f-note').value});
+  db[k].push({type:document.getElementById('f-type').value,time:document.getElementById('f-time').value,desc,por:document.getElementById('f-por').value,kcal:document.getElementById('f-kcal').value,ei:document.getElementById('f-ei').value,kh:document.getElementById('f-kh')&&document.getElementById('f-kh').value||0,vet:document.getElementById('f-vet')&&document.getElementById('f-vet').value||0,vez:document.getElementById('f-vez').value,vocht:document.getElementById('f-vocht').value,note:document.getElementById('f-note').value});
   const p=dv.find(x=>x.naam===desc);if(p&&p.por!==99)p.por=Math.max(0,p.por-1);
   clrForm();upd();scheduleSyncDB();
 }
-function clrForm(){['f-desc','f-por','f-kcal','f-ei','f-vez','f-vocht','f-note'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-warn').style.display='none';clearP100();_typeHandmatig=false;_huidigeEenheid='';setT();}
+function clrForm(){['f-desc','f-por','f-kcal','f-ei','f-kh','f-vet','f-vez','f-vocht','f-note'].forEach(id=>{var e=document.getElementById(id);if(e)e.value='';});document.getElementById('f-warn').style.display='none';clearP100();_typeHandmatig=false;_huidigeEenheid='';setT();}
 function delE(k,i){if(!confirm('Verwijder?'))return;db[k].splice(i,1);upd();scheduleSyncDB();}
 
 function pbar(v,mx,c){const p=Math.min(100,Math.round(v/mx*100));return `<div class="pbar"><div class="pfill" style="width:${p}%;background:${c}"></div></div>`;}
@@ -991,30 +1012,87 @@ function toggleNieuwRecept(){const f=document.getElementById('nieuw-recept-form'
 // Ingrediënten lijst voor nieuw recept
 var rIngLijst = [];
 
+function zoekRIngredient(){
+  var q = document.getElementById('r-ing-nieuw').value.toLowerCase().trim();
+  var drop = document.getElementById('r-ing-drop');
+  if(!q || q.length < 1){drop.style.display='none';return;}
+  var vrRes = vr.filter(p=>p.naam.toLowerCase().includes(q) && p.kcal100);
+  var dvRes = dv.filter(p=>p.naam.toLowerCase().includes(q) && (p.bulk||p.kcal100));
+  var results = vrRes.map(p=>({naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'voorraad'}))
+    .concat(dvRes.map(p=>({naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'diepvries'})));
+  if(!results.length){drop.style.display='none';return;}
+  drop.style.display='block';
+  drop.innerHTML = results.map(function(r){
+    return '<div class="srow" onmousedown="selectRIng(''+r.naam+'','+r.kcal+','+r.ei+','+r.kh+','+r.vet+','+r.vez+')"><span class="badge '+(r.bron==='voorraad'?'bg-teal':'bg-blue')+'">'+r.bron+'</span><span>'+r.naam+'</span><span style="font-size:11px;color:#888;margin-left:auto">'+r.kcal+' kcal/100g</span></div>';
+  }).join('');
+}
+
+function selectRIng(naam,kcal,ei,kh,vet,vez){
+  document.getElementById('r-ing-nieuw').value = naam;
+  document.getElementById('r-ing-kcal').value = kcal;
+  document.getElementById('r-ing-ei').value   = ei;
+  document.getElementById('r-ing-kh').value   = kh;
+  document.getElementById('r-ing-vet').value  = vet;
+  document.getElementById('r-ing-vez').value  = vez;
+  document.getElementById('r-ing-drop').style.display='none';
+  document.getElementById('r-ing-gram').focus();
+}
+
+function hideRIngDrop(){
+  setTimeout(function(){
+    var d=document.getElementById('r-ing-drop');
+    if(d)d.style.display='none';
+  },150);
+}
+
 function voegIngToe(){
   var naam = document.getElementById('r-ing-nieuw').value.trim();
   var gram = parseFloat(document.getElementById('r-ing-gram').value)||0;
+  var eenheid = document.getElementById('r-ing-eenheid').value||'g';
   if(!naam){alert('Vul een ingredientnaam in.');return;}
-  // Zoek in voorraad en diepvries voor bekende voedingswaarden
-  var gevonden = null;
-  var vrItem = vr.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
-  var dvItem = dv.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
-  if(vrItem && vrItem.kcal100){
-    gevonden = {kcal100:vrItem.kcal100,ei100:vrItem.ei100||0,vez100:vrItem.vez100||0};
-  } else if(dvItem && dvItem.bulk){
-    gevonden = {kcal100:dvItem.kcal100,ei100:dvItem.ei100||0,vez100:dvItem.vez100||0};
+
+  // Handmatig ingevulde voedingswaarden (per 100g/ml of per portie)
+  var manKcal = parseFloat(document.getElementById('r-ing-kcal').value)||0;
+  var manEi   = parseFloat(document.getElementById('r-ing-ei').value)||0;
+  var manKh   = parseFloat(document.getElementById('r-ing-kh').value)||0;
+  var manVet  = parseFloat(document.getElementById('r-ing-vet').value)||0;
+  var manVez  = parseFloat(document.getElementById('r-ing-vez').value)||0;
+
+  // Zoek in voorraad en diepvries als geen handmatige waarden
+  var kcal100=manKcal, ei100=manEi, kh100=manKh, vet100=manVet, vez100=manVez;
+  var isPer100 = (eenheid==='g'||eenheid==='ml'||eenheid==='l'||eenheid==='kg');
+
+  if(!manKcal){
+    var vrItem = vr.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
+    var dvItem = dv.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
+    if(vrItem && vrItem.kcal100){
+      kcal100=vrItem.kcal100; ei100=vrItem.ei100||0; kh100=vrItem.kh100||0; vet100=vrItem.vet100||0; vez100=vrItem.vez100||0;
+    } else if(dvItem && (dvItem.bulk||dvItem.kcal100)){
+      kcal100=dvItem.kcal100||0; ei100=dvItem.ei100||0; kh100=dvItem.kh100||0; vet100=dvItem.vet100||0; vez100=dvItem.vez100||0;
+    }
   }
-  var kcal=0,ei=0,vez=0;
-  if(gevonden && gram>0){
-    kcal = Math.round(gevonden.kcal100*gram/100*10)/10;
-    ei   = Math.round(gevonden.ei100*gram/100*10)/10;
-    vez  = Math.round(gevonden.vez100*gram/100*10)/10;
-  }
-  rIngLijst.push({naam,gram,kcal,ei,vez,kcal100:gevonden?gevonden.kcal100:0,ei100:gevonden?gevonden.ei100:0,vez100:gevonden?gevonden.vez100:0});
-  document.getElementById('r-ing-nieuw').value='';
-  document.getElementById('r-ing-gram').value='';
+
+  // Bereken totaal voor dit ingredient
+  var factor = gram > 0 && isPer100 ? gram/100 : eenheid==='kg' ? gram*10 : gram > 0 ? gram : 1;
+  var kcal = Math.round(kcal100 * factor * 10) / 10;
+  var ei   = Math.round(ei100   * factor * 10) / 10;
+  var kh   = Math.round(kh100   * factor * 10) / 10;
+  var vet  = Math.round(vet100  * factor * 10) / 10;
+  var vez  = Math.round(vez100  * factor * 10) / 10;
+
+  rIngLijst.push({naam, gram, eenheid, kcal, ei, kh, vet, vez, kcal100, ei100, kh100, vet100, vez100});
+  // Reset velden
+  ['r-ing-nieuw','r-ing-gram','r-ing-kcal','r-ing-ei','r-ing-kh','r-ing-vet','r-ing-vez'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.value='';
+  });
   renderIngLijst();
   berekenReceptTotaal();
+}
+
+function clrRIng(){
+  ['r-ing-nieuw','r-ing-gram','r-ing-kcal','r-ing-ei','r-ing-kh','r-ing-vet','r-ing-vez'].forEach(function(id){
+    var e=document.getElementById(id); if(e) e.value='';
+  });
 }
 
 
@@ -1022,12 +1100,19 @@ function renderIngLijst(){
   var el = document.getElementById('r-ing-lijst');
   if(!rIngLijst.length){el.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 0">Nog geen ingrediënten toegevoegd.</div>';return;}
   el.innerHTML = rIngLijst.map(function(ing,i){
-    var info = ing.gram ? ing.gram+'g' : '';
-    var macro = ing.kcal ? ' · '+ing.kcal+' kcal · '+ing.ei+'g eiwit' : ' · geen voedingswaarden';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #e8e8e2;font-size:12px">'
-      +'<div style="flex:1"><strong>'+ing.naam+'</strong>'+(info?' ('+info+')':'')+'<span style="color:#888">'+macro+'</span></div>'
-      +'<input type="number" value="'+(ing.gram||0)+'" style="width:60px;font-size:11px;padding:2px 4px" onchange="updateIngGram('+i+',this.value)" placeholder="g">'
-      +'<span style="font-size:10px;color:#888">g</span>'
+    var eenheid = ing.eenheid||'g';
+    var info = ing.gram ? ing.gram+' '+eenheid : '';
+    var macros = [];
+    if(ing.kcal) macros.push(ing.kcal+' kcal');
+    if(ing.ei)   macros.push(ing.ei+'g eiwit');
+    if(ing.kh)   macros.push(ing.kh+'g KH');
+    if(ing.vet)  macros.push(ing.vet+'g vet');
+    if(ing.vez)  macros.push(ing.vez+'g vezels');
+    var macro = macros.length ? ' · '+macros.join(' · ') : ' · geen voedingswaarden';
+    return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #e8e8e2;font-size:12px">'
+      +'<div style="flex:1"><strong>'+ing.naam+'</strong>'+(info?' ('+info+')':'')+'<br><span style="color:#888;font-size:11px">'+macro+'</span></div>'
+      +'<input type="number" value="'+(ing.gram||0)+'" style="width:55px;font-size:11px;padding:2px 4px" onchange="updateIngGram('+i+',this.value)" title="Hoeveelheid aanpassen">'
+      +'<span style="font-size:10px;color:#888">'+eenheid+'</span>'
       +'<button class="btn btn-d btn-sm" onclick="verwijderIng('+i+')" style="padding:2px 6px">✕</button>'
       +'</div>';
   }).join('');
@@ -1036,10 +1121,15 @@ function renderIngLijst(){
 function updateIngGram(i, gram){
   gram = parseFloat(gram)||0;
   rIngLijst[i].gram = gram;
+  var eenheid = rIngLijst[i].eenheid||'g';
+  var isPer100 = (eenheid==='g'||eenheid==='ml'||eenheid==='l'||eenheid==='kg');
+  var factor = isPer100 ? gram/100 : eenheid==='kg' ? gram*10 : 1;
   if(rIngLijst[i].kcal100){
-    rIngLijst[i].kcal = Math.round(rIngLijst[i].kcal100*gram/100*10)/10;
-    rIngLijst[i].ei   = Math.round(rIngLijst[i].ei100*gram/100*10)/10;
-    rIngLijst[i].vez  = Math.round(rIngLijst[i].vez100*gram/100*10)/10;
+    rIngLijst[i].kcal = Math.round(rIngLijst[i].kcal100 * factor * 10)/10;
+    rIngLijst[i].ei   = Math.round(rIngLijst[i].ei100   * factor * 10)/10;
+    rIngLijst[i].kh   = Math.round((rIngLijst[i].kh100||0)  * factor * 10)/10;
+    rIngLijst[i].vet  = Math.round((rIngLijst[i].vet100||0) * factor * 10)/10;
+    rIngLijst[i].vez  = Math.round(rIngLijst[i].vez100  * factor * 10)/10;
   }
   renderIngLijst();
   berekenReceptTotaal();
@@ -1055,6 +1145,8 @@ function berekenReceptTotaal(){
   var porties = parseInt(document.getElementById('r-por')&&document.getElementById('r-por').value)||4;
   var totKcal = rIngLijst.reduce(function(s,x){return s+(x.kcal||0);},0);
   var totEi   = rIngLijst.reduce(function(s,x){return s+(x.ei||0);},0);
+  var totKh   = rIngLijst.reduce(function(s,x){return s+(x.kh||0);},0);
+  var totVet  = rIngLijst.reduce(function(s,x){return s+(x.vet||0);},0);
   var totVez  = rIngLijst.reduce(function(s,x){return s+(x.vez||0);},0);
   var setEl = function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
   setEl('r-tot-kcal', Math.round(totKcal*10)/10);
@@ -1063,6 +1155,8 @@ function berekenReceptTotaal(){
   setEl('r-tot-por',  porties);
   setEl('r-per-kcal', Math.round(totKcal/porties*10)/10);
   setEl('r-per-ei',   Math.round(totEi/porties*10)/10);
+  setEl('r-per-kh',   Math.round(totKh/porties*10)/10);
+  setEl('r-per-vet',  Math.round(totVet/porties*10)/10);
   setEl('r-per-vez',  Math.round(totVez/porties*10)/10);
 }
 
