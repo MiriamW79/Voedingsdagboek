@@ -781,10 +781,20 @@ function showS(){
   const m=[...mDV,...mVR];
   if(!m.length){dr.style.display='none';return;}
   dr.style.display='block';
-  dr.innerHTML=m.map(p=>{
-    const bronBadge=p.bron==='voorraad'?'<span style="font-size:10px;color:#085041;background:#E1F5EE;border-radius:4px;padding:1px 5px;margin-left:4px">voorraad</span>':'';
-    return `<div class="srow" onmousedown="selS('${p.naam}','${p.bron}')"><span class="badge ${CC[p.cat]||'bg-gray'}">${p.cat}</span><span>${p.naam}${bronBadge}</span><span style="font-size:11px;color:#888;margin-left:auto">${p.label}</span></div>`;
+  window._selSResults = m;
+  dr.innerHTML=m.map(function(p,si){
+    var bronBadge=p.bron==='voorraad'?'<span style="font-size:10px;color:#085041;background:#E1F5EE;border-radius:4px;padding:1px 5px;margin-left:4px">voorraad</span>':'';
+    return '<div class="srow" onmousedown="selSIdx('+si+')">'
+      +'<span class="badge '+(CC[p.cat]||'bg-gray')+'">'+p.cat+'</span>'
+      +'<span>'+p.naam+bronBadge+'</span>'
+      +'<span style="font-size:11px;color:#888;margin-left:auto">'+p.label+'</span>'
+      +'</div>';
   }).join('');
+}
+function selSIdx(idx){
+  var r = window._selSResults && window._selSResults[idx];
+  if(!r) return;
+  selS(r.naam, r.bron);
 }
 function hideS(){setTimeout(()=>{document.getElementById('s-drop').style.display='none';},150);}
 // Sla per-100g basiswaarden op voor herberekening
@@ -1012,19 +1022,33 @@ function toggleNieuwRecept(){const f=document.getElementById('nieuw-recept-form'
 // Ingrediënten lijst voor nieuw recept
 var rIngLijst = [];
 
+// Sla zoekresultaten op zodat we ze kunnen opvragen zonder aanhalingstekenproblemen
+var _rIngResults = [];
+
 function zoekRIngredient(){
   var q = document.getElementById('r-ing-nieuw').value.toLowerCase().trim();
   var drop = document.getElementById('r-ing-drop');
   if(!q || q.length < 1){drop.style.display='none';return;}
-  var vrRes = vr.filter(p=>p.naam.toLowerCase().includes(q) && p.kcal100);
-  var dvRes = dv.filter(p=>p.naam.toLowerCase().includes(q) && (p.bulk||p.kcal100));
-  var results = vrRes.map(p=>({naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'voorraad'}))
-    .concat(dvRes.map(p=>({naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'diepvries'})));
-  if(!results.length){drop.style.display='none';return;}
+  var vrRes = vr.filter(function(p){return p.naam.toLowerCase().includes(q) && p.kcal100;});
+  var dvRes = dv.filter(function(p){return p.naam.toLowerCase().includes(q) && (p.bulk||p.kcal100);});
+  _rIngResults = vrRes.map(function(p){return {naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'voorraad'};})
+    .concat(dvRes.map(function(p){return {naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'diepvries'};}));
+  if(!_rIngResults.length){drop.style.display='none';return;}
   drop.style.display='block';
-  drop.innerHTML = results.map(function(r){
-    return '<div class="srow" onmousedown="selectRIng(''+r.naam+'','+r.kcal+','+r.ei+','+r.kh+','+r.vet+','+r.vez+')"><span class="badge '+(r.bron==='voorraad'?'bg-teal':'bg-blue')+'">'+r.bron+'</span><span>'+r.naam+'</span><span style="font-size:11px;color:#888;margin-left:auto">'+r.kcal+' kcal/100g</span></div>';
+  drop.innerHTML = _rIngResults.map(function(r,idx){
+    var badge = r.bron==='voorraad'?'bg-teal':'bg-blue';
+    return '<div class="srow" onmousedown="selectRIngIdx('+idx+')">'
+      +'<span class="badge '+badge+'">'+r.bron+'</span>'
+      +'<span>'+r.naam+'</span>'
+      +'<span style="font-size:11px;color:#888;margin-left:auto">'+r.kcal+' kcal/100g</span>'
+      +'</div>';
   }).join('');
+}
+
+function selectRIngIdx(idx){
+  var r = _rIngResults[idx];
+  if(!r) return;
+  selectRIng(r.naam, r.kcal, r.ei, r.kh, r.vet, r.vez);
 }
 
 function selectRIng(naam,kcal,ei,kh,vet,vez){
