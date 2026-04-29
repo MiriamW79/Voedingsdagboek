@@ -405,10 +405,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <div><div class="lbl">Menstruatie</div>
         <select id="gw-mens">
           <option value="">Geen</option>
-          <option value="begin">Begin cyclus</option>
-          <option value="midden">Midden cyclus</option>
-          <option value="voor">Voor menstruatie</option>
+          <option value="begin">Begin menstruatie</option>
           <option value="tijdens">Tijdens menstruatie</option>
+          <option value="einde">Einde menstruatie</option>
         </select>
       </div>
       <div class="full"><div class="lbl">Bijzonderheden</div>
@@ -833,7 +832,9 @@ function herbereken(){
     document.getElementById('f-kcal').value  = Math.round(_vastePorData.kcal  * aantal * 10) / 10;
     document.getElementById('f-ei').value    = Math.round(_vastePorData.ei    * aantal * 10) / 10;
     document.getElementById('f-vez').value   = Math.round(_vastePorData.vez   * aantal * 10) / 10;
-    document.getElementById('f-vocht').value = Math.round(_vastePorData.vocht * aantal);
+    document.getElementById('f-vocht').value = Math.round((_vastePorData.vocht||0) * aantal);
+    var khEl=document.getElementById('f-kh'); if(khEl) khEl.value=Math.round((_vastePorData.kh||0)*aantal*10)/10;
+    var vetEl=document.getElementById('f-vet'); if(vetEl) vetEl.value=Math.round((_vastePorData.vet||0)*aantal*10)/10;
     var lbl = document.getElementById('f-aantal-lbl');
     if(lbl) lbl.textContent = '× ' + _vastePorData.omschr;
     document.getElementById('f-por').value = aantal === 1 ? _vastePorData.omschr : aantal + '× ' + _vastePorData.omschr;
@@ -888,12 +889,24 @@ function selS(n,bron){
       } else {
       document.getElementById('f-kcal').value=p.kcal100||0;
       document.getElementById('f-ei').value=p.ei100||0;
+      var khEl=document.getElementById('f-kh');if(khEl)khEl.value=p.kh100||0;
+      var vetEl=document.getElementById('f-vet');if(vetEl)vetEl.value=p.vet100||0;
       document.getElementById('f-vez').value=p.vez100||0;
-      _huidigeEenheid = p.unit||'g';
-      document.getElementById('f-vocht').value=0;
-      document.getElementById('f-por').value='100'+(p.unit||'g');
-      if(!_typeHandmatig)if(!_typeHandmatig)document.getElementById('f-type').value=(p.unit==='ml'||p.unit==='l')?'Drinken':'Tussendoortje';
-      setP100(p.kcal100||0, p.ei100||0, p.vez100||0, 0);
+      var eenhVR=(p.unit||'g').toLowerCase();
+      _huidigeEenheid=eenhVR;
+      var perStukVR=['stuks','stuk','pak','blik','fles','zak','portie','brood','kuip'].includes(eenhVR);
+      if(perStukVR){
+        _vastePorData={kcal:p.kcal100||0,ei:p.ei100||0,vez:p.vez100||0,kh:p.kh100||0,vet:p.vet100||0,vocht:0,omschr:'1 '+(eenhVR||'stuk')};
+        var wrap=document.getElementById('f-aantal-wrap');
+        if(wrap){wrap.style.display='block';document.getElementById('f-aantal').value=1;}
+        if(!_typeHandmatig)document.getElementById('f-type').value='Tussendoortje';
+        herbereken();
+      } else {
+        document.getElementById('f-vocht').value=0;
+        document.getElementById('f-por').value='100'+eenhVR;
+        if(!_typeHandmatig)document.getElementById('f-type').value=(eenhVR==='ml'||eenhVR==='l')?'Drinken':'Tussendoortje';
+        setP100(p.kcal100||0,p.ei100||0,p.vez100||0,0);
+      }
     }
   } else {
     var p=dv.find(x=>x.naam===n);
@@ -904,6 +917,8 @@ function selS(n,bron){
       _huidigeEenheid=eenheid;
       document.getElementById('f-kcal').value=p.kcal100||0;
       document.getElementById('f-ei').value=p.ei100||0;
+      var khEl2=document.getElementById('f-kh');if(khEl2)khEl2.value=p.kh100||0;
+      var vetEl2=document.getElementById('f-vet');if(vetEl2)vetEl2.value=p.vet100||0;
       document.getElementById('f-vez').value=p.vez100||0;
       var defaultPor=eenheid==='l'?'100ml':eenheid==='ml'?'100ml':'100g';
       document.getElementById('f-por').value=defaultPor;
@@ -914,6 +929,8 @@ function selS(n,bron){
       _huidigeEenheid='';
       document.getElementById('f-kcal').value=p.kcal;
       document.getElementById('f-ei').value=p.ei;
+      var khEl3=document.getElementById('f-kh');if(khEl3)khEl3.value=p.kh||0;
+      var vetEl3=document.getElementById('f-vet');if(vetEl3)vetEl3.value=p.vet||0;
       document.getElementById('f-vez').value=p.vez||0;
       document.getElementById('f-vocht').value=p.vocht||0;
       document.getElementById('f-por').value='1 portie';
@@ -1384,17 +1401,36 @@ function vrNaarDagboek(ri){
     if(!_typeHandmatig)document.getElementById('f-type').value='Ochtend drankje';
     herbereken();
     } else {
-    document.getElementById('f-kcal').value=p.kcal100||0;
-    document.getElementById('f-ei').value=p.ei100||0;
-    document.getElementById('f-vez').value=p.vez100||0;
     var eenheid=(p.unit||'').toLowerCase();
     _huidigeEenheid = eenheid;
-    if(eenheid==='l')       document.getElementById('f-vocht').value=1000;
-    else if(eenheid==='ml') document.getElementById('f-vocht').value=100;
-    else                    document.getElementById('f-vocht').value=0;
-    document.getElementById('f-por').value='100'+eenheid||'100g';
-    if(!_typeHandmatig)if(!_typeHandmatig)document.getElementById('f-type').value=(eenheid==='ml'||eenheid==='l')?'Drinken':'Tussendoortje';
-    setP100(p.kcal100||0, p.ei100||0, p.vez100||0, eenheid==='l'?1000:eenheid==='ml'?100:0);
+    var perStuk = ['stuks','stuk','pak','blik','fles','zak','portie','brood','kuip'].includes(eenheid);
+    if(perStuk){
+      // Waarden zijn per stuk/eenheid — gebruik _vastePorData zodat aantal aanpasbaar is
+      _vastePorData = {
+        kcal: p.kcal100||0, ei: p.ei100||0, vez: p.vez100||0,
+        kh: p.kh100||0, vet: p.vet100||0, vocht: 0,
+        omschr: '1 ' + (eenheid||'stuk')
+      };
+      var khEl=document.getElementById('f-kh');if(khEl)khEl.value=p.kh100||0;
+      var vetEl=document.getElementById('f-vet');if(vetEl)vetEl.value=p.vet100||0;
+      var wrap = document.getElementById('f-aantal-wrap');
+      if(wrap){wrap.style.display='block'; document.getElementById('f-aantal').value=1;}
+      if(!_typeHandmatig)document.getElementById('f-type').value='Tussendoortje';
+      herbereken();
+    } else {
+      // Waarden per 100g/ml
+      document.getElementById('f-kcal').value=p.kcal100||0;
+      document.getElementById('f-ei').value=p.ei100||0;
+      document.getElementById('f-vez').value=p.vez100||0;
+      var khEl=document.getElementById('f-kh');if(khEl)khEl.value=p.kh100||0;
+      var vetEl=document.getElementById('f-vet');if(vetEl)vetEl.value=p.vet100||0;
+      if(eenheid==='l')       document.getElementById('f-vocht').value=1000;
+      else if(eenheid==='ml') document.getElementById('f-vocht').value=100;
+      else                    document.getElementById('f-vocht').value=0;
+      document.getElementById('f-por').value='100'+(eenheid||'g');
+      if(!_typeHandmatig)document.getElementById('f-type').value=(eenheid==='ml'||eenheid==='l')?'Drinken':'Tussendoortje';
+      setP100(p.kcal100||0, p.ei100||0, p.vez100||0, eenheid==='l'?1000:eenheid==='ml'?100:0);
+    }
   }
   setT();
 }
@@ -1467,7 +1503,7 @@ function gwFilter(d){
   ['14','30','90','0'].forEach(x=>{const b=document.getElementById('gw-f-'+x);if(b)b.className='btn btn-sm'+(String(d)===x?' btn-p':'');});
   renderGewicht();
 }
-const MENS_LBL={begin:'Begin cyclus',midden:'Midden cyclus',voor:'Voor menstruatie',tijdens:'Tijdens menstruatie'};
+const MENS_LBL={begin:'Begin menstruatie',tijdens:'Tijdens menstruatie',einde:'Einde menstruatie'};
 const MOMENT_LBL={ochtend:'Ochtend',middag:'Middag',avond:'Avond'};
 function renderGewicht(){
   if(!gewicht.length){
@@ -1494,7 +1530,7 @@ function renderGewicht(){
   document.getElementById('gw-list').innerHTML=lijst.map((x,ri)=>{
     const i=gewicht.length-1-ri;const prev=i>0?gewicht[i-1]:null;const diff=prev?Math.round((x.kg-prev.kg)*100)/100:null;
     const diffStr=diff===null?'':(diff>0?'<span style="color:#A32D2D;font-size:11px">+'+diff.toFixed(2)+' kg</span>':'<span style="color:#27500A;font-size:11px">'+diff.toFixed(2)+' kg</span>');
-    return `<div style="padding:10px 0;border-bottom:1px solid #f0f0ea;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:13px;font-weight:600">${x.kg.toFixed(2)} kg ${diffStr}</div><div style="font-size:12px;color:#888">${x.datum} · ${MOMENT_LBL[x.moment]||x.moment}</div>${x.mens?`<span class="badge bg-purple" style="margin-top:3px;font-size:10px">${MENS_LBL[x.mens]||x.mens}</span>`:''} ${x.note?`<div style="font-size:12px;color:#888;margin-top:3px">${x.note}</div>`:''}</div><button class="btn btn-d btn-sm" onclick="delGewicht(${i})">✕</button></div>`;
+    return `<div style="padding:10px 0;border-bottom:1px solid #f0f0ea;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:13px;font-weight:600">${x.kg.toFixed(2)} kg ${diffStr}</div><div style="font-size:12px;color:#888">${x.datum} · ${MOMENT_LBL[x.moment]||x.moment}</div>${x.mens?`<span class="badge bg-purple" style="margin-top:3px;font-size:10px">${MENS_LBL[x.mens]||x.mens}</span>`:''} ${x.note?`<div style="font-size:12px;color:#888;margin-top:3px">${x.note}</div>`:''}</div><button class="btn btn-sm" onclick="bewerkGewicht(${i})" style="margin-right:2px">✏️</button><button class="btn btn-d btn-sm" onclick="delGewicht(${i})">✕</button></div>`;
   }).join('');
 }
 
@@ -1603,6 +1639,31 @@ function scheduleSyncDB(){
   },1500);
 }
 
+// ── BEWERK GEWICHT ──
+function bewerkGewicht(i){
+  modalType='gewicht'; modalIdx=i;
+  var x=gewicht[i];
+  document.getElementById('bewerk-titel').textContent='Gewichtmeting bewerken';
+  var momentOpts=['ochtend','middag','avond'].map(function(m){
+    return '<option value="'+m+'"'+(m===x.moment?' selected':'')+'>'+{ochtend:'Ochtend (nuchter)',middag:'Middag',avond:'Avond'}[m]+'</option>';
+  }).join('');
+  var mensOpts=[
+    {v:'',l:'Geen'},
+    {v:'begin',l:'Begin menstruatie'},
+    {v:'tijdens',l:'Tijdens menstruatie'},
+    {v:'einde',l:'Einde menstruatie'}
+  ].map(function(o){return '<option value="'+o.v+'"'+((x.mens||'')===o.v?' selected':'')+'>'+o.l+'</option>';}).join('');
+  document.getElementById('bewerk-inhoud').innerHTML=`
+    <div class="fgrid">
+      <div><div class="lbl">Datum</div><input type="date" id="m-gw-datum" value="${x.datum}"></div>
+      <div><div class="lbl">Gewicht (kg)</div><input type="number" id="m-gw-kg" value="${x.kg}" step="0.01" min="30" max="300"></div>
+      <div><div class="lbl">Tijdstip</div><select id="m-gw-moment">${momentOpts}</select></div>
+      <div><div class="lbl">Menstruatie</div><select id="m-gw-mens">${mensOpts}</select></div>
+      <div class="full"><div class="lbl">Bijzonderheden</div><input type="text" id="m-gw-note" value="${x.note||''}"></div>
+    </div>`;
+  toonModal();
+}
+
 // ── BEWERK DAGBOEK ENTRY ──
 function bewerkEntry(k, i){
   modalType='entry'; modalIdx={k:k, i:i};
@@ -1671,6 +1732,8 @@ function bewerkEntry(k, i){
       <div><div class="lbl">Portie</div><input type="text" id="m-por" value="${x.por||''}" oninput="herbereken_modal()"></div>
       <div><div class="lbl">Kcal</div><input type="number" id="m-kcal-e" value="${x.kcal||0}" step="0.1"></div>
       <div><div class="lbl">Eiwit (g)</div><input type="number" id="m-ei-e" value="${x.ei||0}" step="0.1"></div>
+      <div><div class="lbl">KH (g)</div><input type="number" id="m-kh-e" value="${x.kh||0}" step="0.1"></div>
+      <div><div class="lbl">Vet (g)</div><input type="number" id="m-vet-e" value="${x.vet||0}" step="0.1"></div>
       <div><div class="lbl">Vezels (g)</div><input type="number" id="m-vez-e" value="${x.vez||0}" step="0.1"></div>
       <div><div class="lbl">Vocht (ml)</div><input type="number" id="m-vocht-e" value="${x.vocht||0}"></div>
       <div class="full"><div class="lbl">Notitie</div><input type="text" id="m-note-e" value="${x.note||''}"></div>
@@ -1929,6 +1992,19 @@ function slaModalOp(){
     p.vez100=parseFloat(document.getElementById('m-vez100').value)||0;
     sluitModal(); rvr(); scheduleSync('saveVR',vr);
   }
+  else if(modalType==='gewicht'){
+    var x=gewicht[modalIdx];
+    var nieuwDatum=document.getElementById('m-gw-datum').value;
+    var nieuwKg=parseFloat(document.getElementById('m-gw-kg').value);
+    if(!nieuwDatum||!nieuwKg){alert('Vul datum en gewicht in.');return;}
+    x.datum=nieuwDatum;
+    x.kg=nieuwKg;
+    x.moment=document.getElementById('m-gw-moment').value;
+    x.mens=document.getElementById('m-gw-mens').value;
+    x.note=document.getElementById('m-gw-note').value;
+    gewicht.sort(function(a,b){return a.datum.localeCompare(b.datum);});
+    sluitModal();renderGewicht();scheduleSync('saveGW',gewicht);
+  }
   else if(modalType==='entry'){
     var k=modalIdx.k; var i=modalIdx.i;
     var x=db[k][i];
@@ -1938,6 +2014,8 @@ function slaModalOp(){
     x.por    = document.getElementById('m-por').value;
     x.kcal   = document.getElementById('m-kcal-e').value;
     x.ei     = document.getElementById('m-ei-e').value;
+    x.kh     = document.getElementById('m-kh-e')&&document.getElementById('m-kh-e').value||0;
+    x.vet    = document.getElementById('m-vet-e')&&document.getElementById('m-vet-e').value||0;
     x.vez    = document.getElementById('m-vez-e').value;
     x.vocht  = document.getElementById('m-vocht-e').value;
     x.note   = document.getElementById('m-note-e').value;
