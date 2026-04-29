@@ -383,7 +383,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 <!-- GEWICHT -->
 <div id="panel-gewicht" class="panel">
   <div style="font-size:15px;font-weight:600;margin-bottom:4px">Gewicht bijhouden</div>
-  <div class="lbl" style="margin-bottom:16px" id="gw-subtitel">Voeg hieronder metingen toe</div>
+  <div id="gw-weekoverzicht" style="margin-bottom:16px"></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px">
     <div class="mbox"><div class="lbl">Huidig gewicht</div><div class="mnum" id="gw-huidig">—</div><div class="lbl">kg</div></div>
     <div class="mbox"><div class="lbl">Laagste</div><div class="mnum" id="gw-laag">—</div><div class="lbl">kg</div></div>
@@ -689,7 +689,7 @@ function st(t){
   if(t==='diepvries')rdv();
   if(t==='voorraad')rvr();
   if(t==='recepten')rr();
-  if(t==='gewicht'){initGwDatum();renderGewicht();}
+  if(t==='gewicht'){initGwDatum();renderGewicht();renderWeekOverzicht();}
 }
 
 function nav(d){off=d===0?0:off+d;upd();}
@@ -1483,6 +1483,126 @@ async function zoekProductAI(query, statusElId){
 
 
 
+// ── GEWICHT WEEKOVERZICHT ──
+function renderWeekOverzicht(){
+  var el = document.getElementById('gw-weekoverzicht');
+  if(!el) return;
+
+  // Laatste 7 dagen
+  var vandaag = new Date();
+  var weekGeleden = new Date();
+  weekGeleden.setDate(weekGeleden.getDate() - 6);
+  var cutoff = weekGeleden.toISOString().split('T')[0];
+  var vandaagStr = vandaag.toISOString().split('T')[0];
+
+  // Gewicht afgelopen 7 dagen
+  var gwWeek = gewicht.filter(function(x){ return x.datum >= cutoff && x.datum <= vandaagStr; });
+  var gwDelta = null;
+  if(gwWeek.length >= 2){
+    gwDelta = Math.round((gwWeek[gwWeek.length-1].kg - gwWeek[0].kg)*100)/100;
+  }
+  var gwHuidig = gwWeek.length ? gwWeek[gwWeek.length-1].kg.toFixed(2) : null;
+
+  // Dagboek afgelopen 7 dagen
+  var dagKeys = [];
+  for(var d=0; d<7; d++){
+    var dd = new Date(); dd.setDate(dd.getDate()-d);
+    dagKeys.push(dd.toISOString().split('T')[0]);
+  }
+
+  var totKcal=0, totEi=0, totVez=0, totVocht=0, aantalDagen=0;
+  var sportKcal=0, aantalSportDagen=0;
+
+  dagKeys.forEach(function(k){
+    var entries = db[k]||[];
+    if(!entries.length) return;
+    aantalDagen++;
+    entries.forEach(function(x){
+      totKcal  += parseFloat(x.kcal)||0;
+      totEi    += parseFloat(x.ei)||0;
+      totVez   += parseFloat(x.vez)||0;
+      totVocht += parseFloat(x.vocht)||0;
+    });
+    var sp = sprt[k]||[];
+    if(sp.length){
+      aantalSportDagen++;
+      sp.forEach(function(s){ sportKcal += parseInt(s.kcal)||0; });
+    }
+  });
+
+  var gemKcal  = aantalDagen ? Math.round(totKcal/aantalDagen)  : null;
+  var gemEi    = aantalDagen ? Math.round(totEi/aantalDagen*10)/10 : null;
+  var gemVez   = aantalDagen ? Math.round(totVez/aantalDagen*10)/10 : null;
+  var gemVocht = aantalDagen ? Math.round(totVocht/aantalDagen) : null;
+
+  var doelKcal  = parseInt(document.getElementById('d-kcal')&&document.getElementById('d-kcal').value)||1800;
+  var doelEi    = parseInt(document.getElementById('d-ei')&&document.getElementById('d-ei').value)||80;
+  var doelVez   = parseInt(document.getElementById('d-vez')&&document.getElementById('d-vez').value)||35;
+  var doelVocht = parseInt(document.getElementById('d-vocht')&&document.getElementById('d-vocht').value)||1500;
+
+  if(!aantalDagen && !gwWeek.length){
+    el.innerHTML = '<div style="color:#888;font-size:13px;padding:8px 0">Nog geen data voor de afgelopen 7 dagen.</div>';
+    return;
+  }
+
+  var html = '<div class="card" style="margin-bottom:0">';
+  html += '<div class="sec" style="margin-bottom:10px">Afgelopen 7 dagen</div>';
+
+  // Gewicht rij
+  if(gwHuidig){
+    var deltaKleur = gwDelta===null?'#888':gwDelta<0?'#27500A':gwDelta>0?'#A32D2D':'#888';
+    var deltaTekst = gwDelta===null?'(1 meting)':gwDelta>0?'+'+gwDelta+' kg':gwDelta+' kg';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0ea">';
+    html += '<span style="font-size:18px">⚖️</span>';
+    html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">Gewicht</div>';
+    html += '<div style="font-size:12px;color:#888">'+gwWeek.length+' meting'+(gwWeek.length!==1?'en':'')+' geregistreerd</div></div>';
+    html += '<div style="text-align:right"><div style="font-size:15px;font-weight:600">'+gwHuidig+' kg</div>';
+    html += '<div style="font-size:12px;color:'+deltaKleur+'">'+deltaTekst+'</div></div>';
+    html += '</div>';
+  }
+
+  if(aantalDagen){
+    // Kcal rij
+    var kcalOk = gemKcal <= doelKcal;
+    html += maakRij('🍽', 'Gem. inname', aantalDagen+' dag'+(aantalDagen!==1?'en':''), gemKcal+' kcal', 'doel: max '+doelKcal, kcalOk);
+
+    // Eiwit rij
+    var eiOk = gemEi >= doelEi;
+    html += maakRij('💪', 'Gem. eiwit', '', gemEi+'g', 'doel: min '+doelEi+'g', eiOk);
+
+    // Vezels rij
+    var vezOk = gemVez >= doelVez;
+    html += maakRij('🌾', 'Gem. vezels', '', gemVez+'g', 'doel: min '+doelVez+'g', vezOk);
+
+    // Vocht rij
+    var vochtOk = gemVocht >= doelVocht;
+    html += maakRij('💧', 'Gem. vocht', '', gemVocht+'ml', 'doel: min '+doelVocht+'ml', vochtOk);
+
+    // Sport rij
+    if(aantalSportDagen>0){
+      html += maakRij('🏃', 'Sport', aantalSportDagen+' dag'+(aantalSportDagen!==1?'en':''), sportKcal+' kcal verbrand', '', true);
+    }
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function maakRij(icon, label, sublabel, waarde, doel, ok){
+  var kleur = ok ? '#27500A' : '#A32D2D';
+  var bg = ok ? '#EAF3DE' : '#FCEBEB';
+  var html = '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0ea">';
+  html += '<span style="font-size:16px">'+icon+'</span>';
+  html += '<div style="flex:1"><div style="font-size:13px;font-weight:600">'+label+'</div>';
+  if(sublabel) html += '<div style="font-size:11px;color:#888">'+sublabel+'</div>';
+  html += '</div>';
+  html += '<div style="text-align:right">';
+  html += '<div style="font-size:13px;font-weight:600;color:'+kleur+'">'+waarde+'</div>';
+  if(doel) html += '<div style="font-size:11px;color:#888">'+doel+'</div>';
+  html += '</div></div>';
+  return html;
+}
+
 // ── GEWICHT ──
 let gwDagen=30,gwChart=null;
 function initGwDatum(){const d=new Date();document.getElementById('gw-datum').value=d.toISOString().split('T')[0];}
@@ -1505,6 +1625,94 @@ function gwFilter(d){
 }
 const MENS_LBL={begin:'Begin menstruatie',tijdens:'Tijdens menstruatie',einde:'Einde menstruatie'};
 const MOMENT_LBL={ochtend:'Ochtend',middag:'Middag',avond:'Avond'};
+function renderWeekOverzicht(){
+  var el = document.getElementById('gw-weekoverzicht');
+  if(!el) return;
+
+  // Laatste 7 dagen
+  var vandaag = new Date();
+  var dagen = [];
+  for(var i=6; i>=0; i--){
+    var d = new Date(vandaag);
+    d.setDate(d.getDate()-i);
+    dagen.push(d.toISOString().split('T')[0]);
+  }
+
+  // Gewicht laatste 7 dagen
+  var gwWeek = gewicht.filter(function(x){ return dagen.includes(x.datum); });
+  var gwVandaag = gwWeek.length ? gwWeek[gwWeek.length-1].kg : null;
+  var gw7dagenGeleden = gewicht.filter(function(x){ return x.datum < dagen[0]; });
+  var gwBegin = gw7dagenGeleden.length ? gw7dagenGeleden[gw7dagenGeleden.length-1].kg : (gwWeek.length ? gwWeek[0].kg : null);
+  var gwDelta = (gwVandaag && gwBegin) ? Math.round((gwVandaag - gwBegin)*100)/100 : null;
+  var gwGem = gwWeek.length ? Math.round(gwWeek.reduce(function(s,x){return s+x.kg;},0)/gwWeek.length*100)/100 : null;
+
+  // Dagboek laatste 7 dagen
+  var totKcal=0, totEi=0, totVez=0, totVocht=0, aantalDagen=0;
+  var dagDoelen = {
+    kcal: parseInt(document.getElementById('d-kcal')&&document.getElementById('d-kcal').value)||1800,
+    ei:   parseInt(document.getElementById('d-ei')&&document.getElementById('d-ei').value)||80,
+    vez:  parseInt(document.getElementById('d-vez')&&document.getElementById('d-vez').value)||35,
+    vocht:parseInt(document.getElementById('d-vocht')&&document.getElementById('d-vocht').value)||1500,
+  };
+  var dagenMetData = 0;
+  dagen.forEach(function(dag){
+    var entries = db[dag]||[];
+    if(!entries.length) return;
+    dagenMetData++;
+    totKcal  += entries.reduce(function(s,x){return s+(parseFloat(x.kcal)||0);},0);
+    totEi    += entries.reduce(function(s,x){return s+(parseFloat(x.ei)||0);},0);
+    totVez   += entries.reduce(function(s,x){return s+(parseFloat(x.vez)||0);},0);
+    totVocht += entries.reduce(function(s,x){return s+(parseFloat(x.vocht)||0);},0);
+  });
+
+  var gemKcal  = dagenMetData ? Math.round(totKcal/dagenMetData)   : null;
+  var gemEi    = dagenMetData ? Math.round(totEi/dagenMetData*10)/10 : null;
+  var gemVez   = dagenMetData ? Math.round(totVez/dagenMetData*10)/10 : null;
+  var gemVocht = dagenMetData ? Math.round(totVocht/dagenMetData)   : null;
+
+  // Sport laatste 7 dagen
+  var totSport = 0, sportDagen = 0;
+  dagen.forEach(function(dag){
+    var sp = sprt[dag]||[];
+    if(sp.length){ sportDagen++; totSport += sp.reduce(function(s,x){return s+(parseInt(x.kcal)||0);},0); }
+  });
+
+  if(!dagenMetData && !gwWeek.length){
+    el.innerHTML = '<div class="card" style="color:#888;font-size:13px">Nog geen data voor de afgelopen 7 dagen.</div>';
+    return;
+  }
+
+  function clr(val, doel, lager_is_beter){
+    if(val===null) return '#888';
+    if(lager_is_beter) return val <= doel ? '#27500A' : '#A32D2D';
+    return val >= doel ? '#27500A' : '#854F0B';
+  }
+  function pijl(delta){ return delta===null?'—':delta>0?'▲ +'+delta+' kg':'▼ '+delta+' kg'; }
+
+  el.innerHTML = '<div class="card" style="margin-bottom:0">'
+    +'<div class="sec" style="margin-bottom:10px">Afgelopen 7 dagen</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">'
+
+    // Gewicht
+    +(gwVandaag ? '<div class="mbox"><div class="lbl">Huidig gewicht</div><div class="mnum">'+gwVandaag.toFixed(2)+'</div><div class="lbl">kg</div></div>' : '')
+    +(gwDelta!==null ? '<div class="mbox"><div class="lbl">Verandering (7d)</div><div class="mnum" style="color:'+(gwDelta<=0?'#27500A':'#A32D2D')+'">'+pijl(gwDelta)+'</div><div class="lbl">t.o.v. week geleden</div></div>' : '')
+    +(gwGem ? '<div class="mbox"><div class="lbl">Gem. gewicht</div><div class="mnum">'+gwGem.toFixed(2)+'</div><div class="lbl">kg ('+gwWeek.length+'x gemeten)</div></div>' : '')
+
+    +'</div>'
+
+    // Voeding (alleen als er data is)
+    +(dagenMetData ? '<div style="margin-top:12px;border-top:1px solid #f0f0ea;padding-top:10px">'
+      +'<div class="sec" style="margin-bottom:8px">Gemiddelde inname ('+dagenMetData+' van 7 dagen bijgehouden)</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px">'
+      +'<div class="mbox"><div class="lbl">Gem. kcal</div><div class="mnum" style="color:'+clr(gemKcal,dagDoelen.kcal,true)+'">'+gemKcal+'</div><div class="lbl">doel '+dagDoelen.kcal+'</div></div>'
+      +'<div class="mbox"><div class="lbl">Gem. eiwit</div><div class="mnum" style="color:'+clr(gemEi,dagDoelen.ei,false)+'">'+gemEi+'g</div><div class="lbl">doel '+dagDoelen.ei+'g</div></div>'
+      +'<div class="mbox"><div class="lbl">Gem. vezels</div><div class="mnum" style="color:'+clr(gemVez,dagDoelen.vez,false)+'">'+gemVez+'g</div><div class="lbl">doel '+dagDoelen.vez+'g</div></div>'
+      +'<div class="mbox"><div class="lbl">Gem. vocht</div><div class="mnum" style="color:'+clr(gemVocht,dagDoelen.vocht,false)+'">'+gemVocht+'ml</div><div class="lbl">doel '+dagDoelen.vocht+'ml</div></div>'
+      +(totSport ? '<div class="mbox"><div class="lbl">Sport</div><div class="mnum" style="color:#1D9E75">'+sportDagen+'x</div><div class="lbl">'+totSport+' kcal verbrand</div></div>' : '')
+      +'</div></div>' : '')
+    +'</div>';
+}
+
 function renderGewicht(){
   if(!gewicht.length){
     document.getElementById('gw-huidig').textContent='—';document.getElementById('gw-laag').textContent='—';document.getElementById('gw-hoog').textContent='—';document.getElementById('gw-delta').textContent='—';
@@ -1526,6 +1734,7 @@ function renderGewicht(){
     gwChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Gewicht (kg)',data,borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,0.08)',pointRadius:4,pointBackgroundColor:'#378ADD',tension:0.3,borderWidth:2},{label:'Trend (7d gem.)',data:avg,borderColor:'#1D9E75',backgroundColor:'transparent',pointRadius:0,tension:0.4,borderWidth:2,borderDash:[4,3]}]},options:{responsive:true,plugins:{legend:{display:true,labels:{font:{size:11},boxWidth:20}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+' kg'}}},scales:{y:{ticks:{callback:v=>v.toFixed(2)+' kg',font:{size:11}},grid:{color:'rgba(0,0,0,0.05)'}},x:{ticks:{font:{size:10},maxRotation:45},grid:{display:false}}}}});
   }
   document.getElementById('gw-leeg').style.display='none';
+  renderWeekOverzicht();
   const lijst=[...gewicht].reverse();
   document.getElementById('gw-list').innerHTML=lijst.map((x,ri)=>{
     const i=gewicht.length-1-ri;const prev=i>0?gewicht[i-1]:null;const diff=prev?Math.round((x.kg-prev.kg)*100)/100:null;
