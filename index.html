@@ -862,18 +862,17 @@ function herbereken(){
   }
 
   // Voedingswaarden herberekenen als per-100g product
-  if(!per100g) return;
+  if(!per100g){ console.log('herbereken: per100g is null, geen herberekening'); return; }
+  console.log('herbereken: basis='+basis+' per100g.kh='+per100g.kh+' per100g.vet='+per100g.vet);
   if(isNaN(getal)||getal<=0) return;
   // Converteer l naar ml voor herberekening per 100ml
   var basis = isL ? getal*1000 : getal;
   document.getElementById('f-kcal').value = Math.round(per100g.kcal * basis / 100 * 10) / 10;
   document.getElementById('f-ei').value   = Math.round(per100g.ei   * basis / 100 * 10) / 10;
   document.getElementById('f-vez').value  = Math.round(per100g.vez  * basis / 100 * 10) / 10;
-  var khEl=document.getElementById('f-kh');if(khEl)khEl.value=Math.round((per100g.kh||0)*basis/100*10)/10;
-  var vetEl=document.getElementById('f-vet');if(vetEl)vetEl.value=Math.round((per100g.vet||0)*basis/100*10)/10;
   if(per100g.vocht) document.getElementById('f-vocht').value = Math.round(per100g.vocht * basis / 100);
-  var khEl=document.getElementById('f-kh'); if(khEl) khEl.value=Math.round((per100g.kh||0)*basis/100*10)/10;
-  var vetEl=document.getElementById('f-vet'); if(vetEl) vetEl.value=Math.round((per100g.vet||0)*basis/100*10)/10;
+  var khEl2=document.getElementById('f-kh'); if(khEl2) khEl2.value=Math.round((per100g.kh||0)*basis/100*10)/10;
+  var vetEl2=document.getElementById('f-vet'); if(vetEl2) vetEl2.value=Math.round((per100g.vet||0)*basis/100*10)/10;
 }
 
 function selS(n,bron){
