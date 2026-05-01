@@ -862,8 +862,7 @@ function herbereken(){
   }
 
   // Voedingswaarden herberekenen als per-100g product
-  if(!per100g){ console.log('herbereken: per100g is null, geen herberekening'); return; }
-  console.log('herbereken: basis='+basis+' per100g.kh='+per100g.kh+' per100g.vet='+per100g.vet);
+  if(!per100g) return;
   if(isNaN(getal)||getal<=0) return;
   // Converteer l naar ml voor herberekening per 100ml
   var basis = isL ? getal*1000 : getal;
@@ -1724,7 +1723,6 @@ function scheduleSyncDB(){
   dbSaveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
     var entries_json=JSON.stringify(entries);
-    console.log('saveDAG entries:',entries.length,'datum:',k,'grootte:',entries_json.length,'tekens');
     // Gebruik URLSearchParams voor form-encoded POST — werkt met no-cors
     var params=new URLSearchParams();
     params.append('pw', SHEETS_PW);
@@ -1799,8 +1797,13 @@ function bewerkEntry(k, i){
 
   // Debug: log wat gevonden is
   console.log('bewerkEntry:', x.desc, '| vrItem:', vrItem?vrItem.naam:'niet gevonden', '| dvItem:', dvItem?dvItem.naam:'niet gevonden');
-  // Sla basiswaarden op voor herberekening
+  // Sla basiswaarden op voor herberekening - zoek ook in diepvries bulk
   var heeftVastePor = vrItem && vrItem.vaste_portie;
+  // Als niet gevonden in voorraad, probeer diepvries
+  if(!vrItem && !dvItem){
+    dvItem = dv.find(function(p){ return p.naam.toLowerCase().trim()===descLower && p.bulk; });
+    if(!dvItem) dvItem = dv.find(function(p){ return p.naam.toLowerCase().trim()===descLower; });
+  }
   var heeftPer100g  = (vrItem && vrItem.kcal100 && !vrItem.vaste_portie) || (dvItem && dvItem.bulk);
 
   if(heeftVastePor){
