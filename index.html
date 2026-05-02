@@ -1096,22 +1096,26 @@ function voegIngToe(){
   var manVet  = parseFloat(document.getElementById('r-ing-vet').value)||0;
   var manVez  = parseFloat(document.getElementById('r-ing-vez').value)||0;
 
-  // Zoek in voorraad en diepvries als geen handmatige waarden
-  var kcal100=manKcal, ei100=manEi, kh100=manKh, vet100=manVet, vez100=manVez;
+  // Zoek altijd eerst in voorraad/diepvries op naam — handmatige waarden als fallback
   var isPer100 = (eenheid==='g'||eenheid==='ml'||eenheid==='l'||eenheid==='kg');
-
-  if(!manKcal){
-    var vrItem = vr.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
-    var dvItem = dv.find(x=>x.naam.toLowerCase()===naam.toLowerCase());
-    if(vrItem && vrItem.kcal100){
-      kcal100=vrItem.kcal100; ei100=vrItem.ei100||0; kh100=vrItem.kh100||0; vet100=vrItem.vet100||0; vez100=vrItem.vez100||0;
-    } else if(dvItem && (dvItem.bulk||dvItem.kcal100)){
-      kcal100=dvItem.kcal100||0; ei100=dvItem.ei100||0; kh100=dvItem.kh100||0; vet100=dvItem.vet100||0; vez100=dvItem.vez100||0;
-    }
+  var kcal100=0, ei100=0, kh100=0, vet100=0, vez100=0;
+  var vrItem = vr.find(function(x){return x.naam.toLowerCase()===naam.toLowerCase();});
+  var dvItem = dv.find(function(x){return x.naam.toLowerCase()===naam.toLowerCase();});
+  if(vrItem && vrItem.kcal100){
+    kcal100=vrItem.kcal100; ei100=vrItem.ei100||0; kh100=vrItem.kh100||0; vet100=vrItem.vet100||0; vez100=vrItem.vez100||0;
+  } else if(dvItem && (dvItem.bulk||dvItem.kcal100)){
+    kcal100=dvItem.kcal100||0; ei100=dvItem.ei100||0; kh100=dvItem.kh100||0; vet100=dvItem.vet100||0; vez100=dvItem.vez100||0;
+  } else {
+    // Niet gevonden in voorraad/diepvries — gebruik handmatige invoer als per-100g waarden
+    kcal100=manKcal; ei100=manEi; kh100=manKh; vet100=manVet; vez100=manVez;
   }
 
   // Bereken totaal voor dit ingredient
-  var factor = gram > 0 && isPer100 ? gram/100 : eenheid==='kg' ? gram*10 : gram > 0 ? gram : 1;
+  var factor;
+  if(eenheid==='kg')       factor = gram * 10;
+  else if(eenheid==='l')   factor = gram * 10;
+  else if(isPer100)        factor = gram / 100;
+  else                     factor = gram > 0 ? gram : 1;
   var kcal = Math.round(kcal100 * factor * 10) / 10;
   var ei   = Math.round(ei100   * factor * 10) / 10;
   var kh   = Math.round(kh100   * factor * 10) / 10;
@@ -1160,14 +1164,17 @@ function updateIngGram(i, gram){
   gram = parseFloat(gram)||0;
   rIngLijst[i].gram = gram;
   var eenheid = rIngLijst[i].eenheid||'g';
-  var isPer100 = (eenheid==='g'||eenheid==='ml'||eenheid==='l'||eenheid==='kg');
-  var factor = isPer100 ? gram/100 : eenheid==='kg' ? gram*10 : 1;
-  if(rIngLijst[i].kcal100){
-    rIngLijst[i].kcal = Math.round(rIngLijst[i].kcal100 * factor * 10)/10;
-    rIngLijst[i].ei   = Math.round(rIngLijst[i].ei100   * factor * 10)/10;
-    rIngLijst[i].kh   = Math.round((rIngLijst[i].kh100||0)  * factor * 10)/10;
-    rIngLijst[i].vet  = Math.round((rIngLijst[i].vet100||0) * factor * 10)/10;
-    rIngLijst[i].vez  = Math.round(rIngLijst[i].vez100  * factor * 10)/10;
+  // factor: hoeveel maal 100g/ml zit er in de opgegeven hoeveelheid
+  var factor;
+  if(eenheid==='kg')       factor = gram * 10;   // 1 kg = 10 × 100g
+  else if(eenheid==='l')   factor = gram * 10;   // 1 l  = 10 × 100ml
+  else                     factor = gram / 100;  // g, ml, stuks etc.
+  if(rIngLijst[i].kcal100 || rIngLijst[i].ei100){
+    rIngLijst[i].kcal = Math.round((rIngLijst[i].kcal100||0) * factor * 10)/10;
+    rIngLijst[i].ei   = Math.round((rIngLijst[i].ei100||0)   * factor * 10)/10;
+    rIngLijst[i].kh   = Math.round((rIngLijst[i].kh100||0)   * factor * 10)/10;
+    rIngLijst[i].vet  = Math.round((rIngLijst[i].vet100||0)  * factor * 10)/10;
+    rIngLijst[i].vez  = Math.round((rIngLijst[i].vez100||0)  * factor * 10)/10;
   }
   renderIngLijst();
   berekenReceptTotaal();
