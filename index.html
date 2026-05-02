@@ -126,7 +126,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 
 <!-- DAGBOEK -->
 <div id="panel-dagboek" class="panel active">
-  <div id="sp-banner" class="sport-banner" style="display:none">Sportdag vandaag (6:30) — cappuccino met Oatly voor het sporten!</div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div><div style="font-size:15px;font-weight:600" id="dag-lbl">Vandaag</div><div class="lbl" style="margin-bottom:0" id="dat-lbl"></div></div>
     <div style="display:flex;gap:6px">
@@ -142,11 +141,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     <div class="mbox"><div class="lbl">Eiwit</div><div class="mnum" id="t-ei">0</div><div class="lbl">gram</div></div>
     <div class="mbox"><div class="lbl">Vezels</div><div class="mnum" id="t-vez">0</div><div class="lbl">gram</div></div>
     <div class="mbox"><div class="lbl">Vocht</div><div class="mnum" id="t-vocht">0</div><div class="lbl">ml</div></div>
-  </div>
-  <div style="margin-bottom:1rem">
-    <div class="sec">Eetmomenten</div>
-    <div id="entries"></div>
-    <div id="leeg" style="color:#888;font-size:13px;padding:10px 0">Nog niets geregistreerd.</div>
   </div>
   <div class="card">
     <div class="sec" style="margin-bottom:10px">Maaltijd toevoegen</div>
@@ -191,6 +185,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     </div>
     <div style="font-size:12px;color:#888;margin-top:6px;line-height:1.5">Maagverkleining: kleine porties, kauw goed, wacht 30 min na eten met drinken.</div>
   </div>
+  <div style="margin-bottom:1rem">
+    <div class="sec">Eetmomenten</div>
+    <div id="entries"></div>
+    <div id="leeg" style="color:#888;font-size:13px;padding:10px 0">Nog niets geregistreerd.</div>
+  </div>
+
   <div class="card">
     <div class="sec">Dagdoelen</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px">
@@ -214,7 +214,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 <div id="panel-sport" class="panel">
   <div style="font-size:15px;font-weight:600;margin-bottom:4px" id="sp-daglbl">Sport vandaag</div>
   <div class="lbl" style="margin-bottom:16px" id="sp-datlbl"></div>
-  <div id="sport-list" style="margin-bottom:16px"></div>
   <div class="card">
     <div class="sec" style="margin-bottom:10px">Sportactiviteit toevoegen</div>
     <div class="fgrid">
@@ -227,6 +226,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     <div style="margin-top:10px"><button class="btn btn-p" onclick="addSport()">Toevoegen</button></div>
     <div style="font-size:12px;color:#888;margin-top:6px">De verbrande kcal worden verrekend als netto kcal op het dagboek-tabblad.</div>
   </div>
+  <div id="sport-list" style="margin-bottom:16px"></div>
+
 </div>
 
 <!-- RECEPTEN -->
@@ -303,9 +304,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
   </div>
   <input type="text" id="dv-search" placeholder="zoek in diepvries..." oninput="rdv()" style="margin-bottom:10px">
   <div id="dv-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-  <div id="dv-list"></div>
-
-  <div class="card" style="margin-top:8px">
+  <div class="card" style="margin-bottom:12px">
     <div class="sec" style="margin-bottom:10px">Handmatig toevoegen</div>
     <div class="fgrid">
       <div class="full"><div class="lbl">Naam</div><input type="text" id="dv-naam"></div>
@@ -331,6 +330,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     </div>
     <div style="margin-top:10px"><button class="btn btn-p" onclick="addDv()">Toevoegen</button></div>
   </div>
+  <div id="dv-list"></div>
+
+
 </div>
 
 <!-- VOORRAAD -->
@@ -338,9 +340,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
   <div style="font-size:15px;font-weight:600;margin-bottom:8px">Overige voorraad</div>
   <input type="text" id="vr-search" placeholder="zoek in voorraad..." oninput="rvr()" style="margin-bottom:10px">
   <div id="vr-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-  <div id="vr-list"></div>
-
-  <div class="card" style="margin-top:8px">
+  <div class="card" style="margin-bottom:12px">
     <div class="sec" style="margin-bottom:10px">Handmatig toevoegen</div>
     <div class="fgrid">
       <div class="full"><div class="lbl">Naam</div><input type="text" id="p-naam"></div>
@@ -377,6 +377,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     <div style="margin-top:10px"><button class="btn btn-p" onclick="addVr()">Toevoegen</button></div>
   </div>
 </div>
+
+  <div id="vr-list"></div>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
@@ -503,7 +506,6 @@ async function checkPW() {
 // ══════════════════════════════════════════════════════════
 //  APP DATA
 // ══════════════════════════════════════════════════════════
-const SD=[1,3,5];
 var off=0,db={},vr=[],dv=[],sprt={},recepten=[],gewicht=[];
 
 dv=[
@@ -676,7 +678,6 @@ const START_GEWICHT = [
 // ══════════════════════════════════════════════════════════
 function getTK(){const d=new Date();d.setDate(d.getDate()+off);return d.toISOString().split('T')[0];}
 function getDL(o){const d=new Date();d.setDate(d.getDate()+o);const ns=['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];const n=ns[d.getDay()];return n[0].toUpperCase()+n.slice(1)+' '+d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();}
-function isSD(o){const d=new Date();d.setDate(d.getDate()+o);return SD.includes(d.getDay());}
 
 function st(t){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
@@ -707,7 +708,6 @@ function upd(){
   const k=getTK();
   document.getElementById('dat-lbl').textContent=getDL(off);
   document.getElementById('dag-lbl').textContent=off===0?'Vandaag':off===-1?'Gisteren':off===1?'Morgen':getDL(off);
-  document.getElementById('sp-banner').style.display=isSD(off)?'block':'none';
   const e=db[k]||[];
   const list=document.getElementById('entries');
   const leeg=document.getElementById('leeg');
@@ -799,7 +799,6 @@ function hideS(){setTimeout(()=>{document.getElementById('s-drop').style.display
 var per100g = null;
 var _typeHandmatig = false;
 var _vastePorData = null; // voor vaste portie herberekening (bijv. cappuccino)
-var _typeHandmatig = false; // flag: gebruiker heeft type zelf gekozen
 
 function aantalAanpassen(d){
   var el = document.getElementById('f-aantal');
@@ -821,7 +820,6 @@ function clearP100(){
 
 // Huidige eenheid van geselecteerd product (voor vocht herberekening)
 var _huidigeEenheid = '';
-var _typeHandmatig = false; // true als gebruiker type zelf gekozen heeft
 
 function herbereken(){
   // Vaste portie herberekening (cappuccino, etc)
@@ -1323,8 +1321,10 @@ function dvDBbulk(ri){
   document.getElementById('f-kcal').value=Math.round(p.kcal100*g/100*10)/10;
   document.getElementById('f-ei').value=Math.round(p.ei100*g/100*10)/10;
   document.getElementById('f-vez').value=Math.round(p.vez100*g/100*10)/10;
+  var khEl=document.getElementById('f-kh');if(khEl)khEl.value=Math.round((p.kh100||0)*g/100*10)/10;
+  var vetEl=document.getElementById('f-vet');if(vetEl)vetEl.value=Math.round((p.vet100||0)*g/100*10)/10;
   document.getElementById('f-por').value=g+'g';
-  if(!_typeHandmatig)if(!_typeHandmatig)document.getElementById('f-type').value='Ontbijt';
+  if(!_typeHandmatig)document.getElementById('f-type').value='Ontbijt';
   setP100(p.kcal100||0, p.ei100||0, p.vez100||0, 0, p.kh100||0, p.vet100||0);
   setT();
 }
@@ -1332,14 +1332,16 @@ function dvDB(i){
   const p=dv[i];st('dagboek');
   clearP100(); _typeHandmatig=false;
   document.getElementById('f-desc').value=p.naam;
-  document.getElementById('f-kcal').value=p.kcal||0;
-  document.getElementById('f-ei').value=p.ei||0;
-  document.getElementById('f-vez').value=p.vez||0;
-  var khEl=document.getElementById('f-kh'); if(khEl) khEl.value=p.kh||0;
-  var vetEl=document.getElementById('f-vet'); if(vetEl) vetEl.value=p.vet||0;
-  document.getElementById('f-vocht').value=0;
-  document.getElementById('f-por').value='1 portie';
+  // Sla als vastePorData op zodat aantal aanpasbaar is
+  _vastePorData = {
+    kcal: p.kcal||0, ei: p.ei||0, vez: p.vez||0,
+    kh: p.kh||0, vet: p.vet||0, vocht: 0,
+    omschr: '1 portie'
+  };
+  var wrap = document.getElementById('f-aantal-wrap');
+  if(wrap){wrap.style.display='block'; document.getElementById('f-aantal').value=1;}
   if(!_typeHandmatig)document.getElementById('f-type').value=p.cat==='Smoothie'?'Smoothie':p.cat==='Soep'?'Lunch':'Diner';
+  herbereken();
   setT();
 }
 function addDv(){
@@ -1447,7 +1449,7 @@ function vrNaarDagboek(ri){
   setT();
 }
 function vrQ(i,d){vr[i].qty=Math.max(0,vr[i].qty+d);rvr();scheduleSync('saveVR',vr);}
-function vrF(c){vrCF=c;rvr();}
+
 function delVr(i){if(!confirm('Verwijder?'))return;vr.splice(i,1);rvr();scheduleSync('saveVR',vr);}
 function addVr(){
   const n=document.getElementById('p-naam').value.trim();if(!n){alert('Vul naam in.');return;}
@@ -1455,44 +1457,6 @@ function addVr(){
   ['p-naam','p-qty','p-unit','p-min','p-kcal100','p-ei100','p-kh100','p-vet100','p-vez100'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   rvr();scheduleSync('saveVR',vr);
 }
-
-// ── OPEN FOOD FACTS ZOEKFUNCTIE via Apps Script (omzeilt Safari CORS) ──
-async function zoekProductAI(query, statusElId){
-  const statusEl=document.getElementById(statusElId);
-  statusEl.textContent='Zoeken in Open Food Facts...';
-  statusEl.style.color='#888';
-  try{
-    if(!SHEETS_URL) throw new Error('Google Sheets niet gekoppeld');
-    const url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=zoekOFF&q='+encodeURIComponent(query);
-    const resp=await fetch(url);
-    if(!resp.ok) throw new Error('Verbinding mislukt');
-    const wrapper=await resp.json();
-    if(wrapper.error) throw new Error(wrapper.error);
-    const data=wrapper.data;
-    if(!data.products||!data.products.length) throw new Error('Niet gevonden — probeer een andere naam');
-    const p=data.products.find(x=>x.nutriments&&x.nutriments['energy-kcal_100g'])||data.products[0];
-    if(!p||!p.nutriments) throw new Error('Geen voedingswaarden gevonden voor dit product');
-    const n=p.nutriments;
-    const result={
-      naam: p.product_name||p.product_name_nl||query,
-      kcal100: Math.round(n['energy-kcal_100g']||0),
-      ei100:   Math.round((n['proteins_100g']||0)*10)/10,
-      kh100:   Math.round((n['carbohydrates_100g']||0)*10)/10,
-      vet100:  Math.round((n['fat_100g']||0)*10)/10,
-      vez100:  Math.round((n['fiber_100g']||0)*10)/10,
-      glutenvrij: 'onbekend',
-      categorie: 'Overig',
-      eenheid: 'stuks',
-    };
-    statusEl.textContent='';
-    return result;
-  }catch(e){
-    statusEl.textContent='Fout: '+e.message;
-    statusEl.style.color='#A32D2D';
-    return null;
-  }
-}
-
 
 
 // ── GEWICHT ──
@@ -1807,13 +1771,25 @@ function bewerkEntry(k, i){
   var heeftPer100g  = (vrItem && vrItem.kcal100 && !vrItem.vaste_portie) || (dvItem && dvItem.bulk);
 
   if(heeftVastePor){
-    // Sla per-portie waarden op zodat we kunnen vermenigvuldigen
     window._modalVastePor = {
-      kcal: vrItem.kcalPor||0,
-      ei:   vrItem.eiPor||0,
-      vez:  vrItem.vezPor||0,
-      vocht:vrItem.vochtPor||0,
+      kcal:  vrItem.kcalPor||0,
+      ei:    vrItem.eiPor||0,
+      vez:   vrItem.vezPor||0,
+      vocht: vrItem.vochtPor||0,
+      kh:    vrItem.khPor||0,
+      vet:   vrItem.vetPor||0,
       omschr: vrItem.por_omschrijving||'1 kop'
+    };
+  } else if(dvItem && !dvItem.bulk){
+    // Diepvries normaal product: sla als vastePorData op voor aantal-herberekening
+    window._modalVastePor = {
+      kcal:  dvItem.kcal||0,
+      ei:    dvItem.ei||0,
+      vez:   dvItem.vez||0,
+      vocht: 0,
+      kh:    dvItem.kh||0,
+      vet:   dvItem.vet||0,
+      omschr: '1 portie'
     };
   } else {
     window._modalVastePor = null;
@@ -1828,18 +1804,19 @@ function bewerkEntry(k, i){
 
   // Haal huidig aantal uit portie string (bijv. "2 kop (145ml)" → 2)
   var huidigAantal = 1;
-  if(heeftVastePor){
+  if(heeftVastePor || (dvItem && !dvItem.bulk)){
     var m = String(x.por||'').match(/^(\d+(?:[.,]\d+)?)/);
     if(m) huidigAantal = parseFloat(m[1].replace(',','.'));
   }
 
-  var aantalRij = heeftVastePor ? `
+  var heeftAantal = heeftVastePor || (dvItem && !dvItem.bulk);
+  var aantalRij = heeftAantal ? `
       <div><div class="lbl">Aantal</div>
         <input type="number" id="m-aantal" value="${huidigAantal}" min="0.5" step="0.5" oninput="herbereken_aantal()">
       </div>
-      <div style="align-self:end;padding-bottom:4px;font-size:12px;color:#888">${window._modalVastePor.omschr} per stuk</div>` : '';
+      <div style="align-self:end;padding-bottom:4px;font-size:12px;color:#888">${window._modalVastePor?window._modalVastePor.omschr:''} per stuk</div>` : '';
 
-  var porTip = heeftVastePor
+  var porTip = (heeftVastePor || (dvItem && !dvItem.bulk))
     ? 'Pas het aantal aan — kcal en voedingswaarden worden automatisch herberekend.'
     : heeftPer100g
       ? 'Pas de portie aan in gram — kcal en voedingswaarden worden automatisch herberekend.'
@@ -1872,8 +1849,9 @@ function herbereken_aantal(){
   document.getElementById('m-kcal-e').value  = Math.round(vp.kcal  * aantal * 10) / 10;
   document.getElementById('m-ei-e').value    = Math.round(vp.ei    * aantal * 10) / 10;
   document.getElementById('m-vez-e').value   = Math.round(vp.vez   * aantal * 10) / 10;
-  document.getElementById('m-vocht-e').value = Math.round(vp.vocht * aantal);
-  // Pas ook portie tekst aan
+  document.getElementById('m-vocht-e').value = Math.round((vp.vocht||0) * aantal);
+  var khEl=document.getElementById('m-kh-e'); if(khEl) khEl.value=Math.round((vp.kh||0)*aantal*10)/10;
+  var vetEl=document.getElementById('m-vet-e'); if(vetEl) vetEl.value=Math.round((vp.vet||0)*aantal*10)/10;
   document.getElementById('m-por').value = aantal === 1 ? vp.omschr : aantal + 'x ' + vp.omschr;
 }
 
@@ -1881,11 +1859,13 @@ function herbereken_aantal(){
 function herbereken_modal(){
   if(!per100g) return;
   var por = document.getElementById('m-por').value.trim();
-  var gram = parseFloat(por.replace(',','.'));
+  var gram = parseFloat(por.replace(',','.').replace(/[^0-9.]/g,''));
   if(isNaN(gram)||gram<=0) return;
   document.getElementById('m-kcal-e').value = Math.round(per100g.kcal * gram / 100 * 10) / 10;
   document.getElementById('m-ei-e').value   = Math.round(per100g.ei   * gram / 100 * 10) / 10;
   document.getElementById('m-vez-e').value  = Math.round(per100g.vez  * gram / 100 * 10) / 10;
+  var khEl=document.getElementById('m-kh-e'); if(khEl) khEl.value=Math.round((per100g.kh||0)*gram/100*10)/10;
+  var vetEl=document.getElementById('m-vet-e'); if(vetEl) vetEl.value=Math.round((per100g.vet||0)*gram/100*10)/10;
 }
 
 // ── BEWERK MODAL ──
