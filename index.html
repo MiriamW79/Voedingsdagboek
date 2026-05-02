@@ -183,7 +183,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <button class="btn btn-p" onclick="addEntry()">Toevoegen</button>
       <button class="btn" onclick="clrForm()">Wissen</button>
     </div>
-    <div style="font-size:12px;color:#888;margin-top:6px;line-height:1.5">Maagverkleining: kleine porties, kauw goed, wacht 30 min na eten met drinken.</div>
   </div>
   <div style="margin-bottom:1rem">
     <div class="sec">Eetmomenten</div>
@@ -299,9 +298,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 
 <!-- DIEPVRIES -->
 <div id="panel-diepvries" class="panel">
-  <div style="background:#E6F1FB;border:1px solid #B5D4F4;border-radius:8px;padding:8px 14px;font-size:12px;color:#0C447C;margin-bottom:12px">
-    Klik op "+ dagboek" om een product toe te voegen aan het dagboek
-  </div>
   <input type="text" id="dv-search" placeholder="zoek in diepvries..." oninput="rdv()" style="margin-bottom:10px">
   <div id="dv-filter" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div class="card" style="margin-bottom:12px">
@@ -376,10 +372,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     </div>
     <div style="margin-top:10px"><button class="btn btn-p" onclick="addVr()">Toevoegen</button></div>
   </div>
-</div>
-
   <div id="vr-list"></div>
-
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
@@ -391,6 +385,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     <div class="mbox"><div class="lbl">Laagste</div><div class="mnum" id="gw-laag">—</div><div class="lbl">kg</div></div>
     <div class="mbox"><div class="lbl">Hoogste</div><div class="mnum" id="gw-hoog">—</div><div class="lbl">kg</div></div>
     <div class="mbox"><div class="lbl">Verandering</div><div class="mnum" id="gw-delta">—</div><div class="lbl">kg totaal</div></div>
+    <div class="mbox"><div class="lbl">Verandering 7 dagen</div><div class="mnum" id="gw-delta7">—</div><div class="lbl">kg</div></div>
+    <div class="mbox"><div class="lbl">Gem. gewicht 7 dagen</div><div class="mnum" id="gw-gem7">—</div><div class="lbl">kg</div></div>
   </div>
   <div class="card" style="margin-bottom:16px">
     <div class="sec" style="margin-bottom:10px">Gewicht toevoegen</div>
@@ -1581,6 +1577,20 @@ function renderGewicht(){
   document.getElementById('gw-huidig').textContent=laatste.kg.toFixed(2);document.getElementById('gw-huidig').style.color='#1a1a1a';
   document.getElementById('gw-laag').textContent=Math.min(...kgs).toFixed(2);document.getElementById('gw-hoog').textContent=Math.max(...kgs).toFixed(2);
   document.getElementById('gw-delta').textContent=(delta>0?'+':'')+delta.toFixed(2);document.getElementById('gw-delta').style.color=delta<0?'#27500A':delta>0?'#A32D2D':'#1a1a1a';
+  // 7-daagse statistieken
+  var cutoff7=new Date();cutoff7.setDate(cutoff7.getDate()-6);var cutStr7=cutoff7.toISOString().split('T')[0];
+  var gw7=gewicht.filter(function(x){return x.datum>=cutStr7;});
+  var gem7El=document.getElementById('gw-gem7');
+  var delta7El=document.getElementById('gw-delta7');
+  if(gw7.length){
+    var gem7=Math.round(gw7.reduce(function(s,x){return s+x.kg;},0)/gw7.length*100)/100;
+    gem7El.textContent=gem7.toFixed(2);gem7El.style.color='#1a1a1a';
+    if(gw7.length>=2){
+      var d7=Math.round((gw7[gw7.length-1].kg-gw7[0].kg)*100)/100;
+      delta7El.textContent=(d7>0?'+':'')+d7.toFixed(2);
+      delta7El.style.color=d7<0?'#27500A':d7>0?'#A32D2D':'#1a1a1a';
+    } else {delta7El.textContent='—';}
+  } else {gem7El.textContent='—';delta7El.textContent='—';}
   document.getElementById('gw-leeg-chart').style.display=filtered.length<1?'block':'none';document.getElementById('gw-chart').style.display=filtered.length>0?'block':'none';
   if(filtered.length>0){
     const labels=filtered.map(x=>x.datum.slice(5));const data=filtered.map(x=>x.kg);
