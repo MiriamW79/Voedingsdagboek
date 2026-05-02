@@ -380,13 +380,15 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 <!-- GEWICHT -->
 <div id="panel-gewicht" class="panel">
   <div style="font-size:15px;font-weight:600;margin-bottom:4px">Gewicht bijhouden</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
     <div class="mbox"><div class="lbl">Huidig gewicht</div><div class="mnum" id="gw-huidig">—</div><div class="lbl">kg</div></div>
     <div class="mbox"><div class="lbl">Laagste</div><div class="mnum" id="gw-laag">—</div><div class="lbl">kg</div></div>
     <div class="mbox"><div class="lbl">Hoogste</div><div class="mnum" id="gw-hoog">—</div><div class="lbl">kg</div></div>
-    <div class="mbox"><div class="lbl">Verandering</div><div class="mnum" id="gw-delta">—</div><div class="lbl">kg totaal</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+    <div class="mbox"><div class="lbl">Verandering totaal</div><div class="mnum" id="gw-delta">—</div><div class="lbl">kg</div></div>
     <div class="mbox"><div class="lbl">Verandering 7 dagen</div><div class="mnum" id="gw-delta7">—</div><div class="lbl">kg</div></div>
-    <div class="mbox"><div class="lbl">Gem. gewicht 7 dagen</div><div class="mnum" id="gw-gem7">—</div><div class="lbl">kg</div></div>
+    <div class="mbox"><div class="lbl">Gem. 7 dagen</div><div class="mnum" id="gw-gem7">—</div><div class="lbl">kg</div></div>
   </div>
   <div class="card" style="margin-bottom:16px">
     <div class="sec" style="margin-bottom:10px">Gewicht toevoegen</div>
@@ -1611,6 +1613,7 @@ function renderGewicht(){
 // ── GOOGLE SHEETS SYNC ──
 var syncStatus={saving:false,loading:false,lastSaved:null,error:null};
 var saveTimer=null;
+var _pendingSyncs=0; // telt hoeveel syncs er nog in de wachtrij staan
 
 function showSyncBar(){
   var bar=document.getElementById('sync-bar');if(!bar)return;
@@ -1627,6 +1630,12 @@ function showSyncBar(){
 // Laden via fetch (GET, JSON response)
 function loadFromSheets(){
   if(!SHEETS_URL)return;
+  // Blokkeer laden als er nog syncs in behandeling zijn — anders overschrijven we lokale wijzigingen
+  if(_pendingSyncs>0){
+    console.log('loadFromSheets geblokkeerd: '+_pendingSyncs+' sync(s) nog in behandeling');
+    setTimeout(loadFromSheets, 2000); // probeer opnieuw na 2 seconden
+    return;
+  }
   syncStatus.loading=true;syncStatus.error=null;showSyncBar();
   var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load';
   fetch(url)
@@ -1654,6 +1663,7 @@ function loadFromSheets(){
 // Opslaan via POST (geen URL-lengte limiet) met fallback naar Image-trick
 function scheduleSync(action,data){
   if(!SHEETS_URL)return;
+  _pendingSyncs++;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
@@ -1668,15 +1678,16 @@ function scheduleSync(action,data){
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:params.toString()
     }).then(function(){
+      _pendingSyncs=Math.max(0,_pendingSyncs-1);
       syncStatus.saving=false;
       syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
       syncStatus.error=null;
       showSyncBar();
     }).catch(function(){
-      // Fallback: Image trick
       var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action='+action+'&data='+encodeURIComponent(dataJson);
       var img=new Image();
       img.onload=img.onerror=function(){
+        _pendingSyncs=Math.max(0,_pendingSyncs-1);
         syncStatus.saving=false;
         syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
         syncStatus.error=null;
@@ -1694,10 +1705,10 @@ function scheduleSyncDB(){
   var k=getTK();
   var entries=db[k]||[];
   clearTimeout(dbSaveTimer);
+  _pendingSyncs++;
   dbSaveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
     var entries_json=JSON.stringify(entries);
-    // Gebruik URLSearchParams voor form-encoded POST — werkt met no-cors
     var params=new URLSearchParams();
     params.append('pw', SHEETS_PW);
     params.append('action', 'saveDAG');
@@ -1709,17 +1720,16 @@ function scheduleSyncDB(){
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: params.toString()
     }).then(function(){
+      _pendingSyncs=Math.max(0,_pendingSyncs-1);
       syncStatus.saving=false;
       syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
       syncStatus.error=null;
       showSyncBar();
     }).catch(function(e){
-      // no-cors gooit altijd een error op de response, maar de request komt wel aan
-      // Probeer fallback via Image
-      console.log('POST fallback naar Image trick, fout:', e.message);
       var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(entries_json);
       var img=new Image();
       img.onload=img.onerror=function(){
+        _pendingSyncs=Math.max(0,_pendingSyncs-1);
         syncStatus.saving=false;
         syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
         syncStatus.error=null;
