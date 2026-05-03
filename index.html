@@ -1851,8 +1851,6 @@ function bewerkEntry(k, i){
   var vrItem = vr.find(function(p){return p.naam.toLowerCase().trim()===descLower;});
   var dvItem = dv.find(function(p){return p.naam.toLowerCase().trim()===descLower;});
 
-  // Debug: log wat gevonden is
-  console.log('bewerkEntry:', x.desc, '| vrItem:', vrItem?vrItem.naam:'niet gevonden', '| dvItem:', dvItem?dvItem.naam:'niet gevonden');
   // Sla basiswaarden op voor herberekening - zoek ook in diepvries bulk
   var heeftVastePor = vrItem && vrItem.vaste_portie;
   // Als niet gevonden in voorraad, probeer diepvries
