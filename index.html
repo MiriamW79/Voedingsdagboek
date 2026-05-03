@@ -255,9 +255,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
               <input type="text" id="r-ing-nieuw" placeholder="typ om te zoeken in voorraad/diepvries of vrij invullen..." autocomplete="off" oninput="zoekRIngredient()" onblur="hideRIngDrop()">
               <div id="r-ing-drop" class="sdrop" style="display:none"></div>
             </div>
-            <div><div class="lbl">Hoeveelheid</div><input type="number" id="r-ing-gram" placeholder="100" min="0" step="any"></div>
+            <div><div class="lbl">Hoeveelheid</div><input type="number" id="r-ing-gram" placeholder="100" min="0" step="any" oninput="previewIngWaarden()"></div>
             <div><div class="lbl">Eenheid</div>
-              <select id="r-ing-eenheid">
+              <select id="r-ing-eenheid" onchange="previewIngWaarden()">
                 <option value="g">gram (g)</option>
                 <option value="ml">milliliter (ml)</option>
                 <option value="l">liter (l)</option>
@@ -1081,6 +1081,38 @@ function hideRIngDrop(){
     var d=document.getElementById('r-ing-drop');
     if(d)d.style.display='none';
   },150);
+}
+
+function previewIngWaarden(){
+  // Herbereken voedingswaarden live als gram/eenheid verandert
+  var naam = document.getElementById('r-ing-nieuw').value.trim();
+  if(!naam) return;
+  var gram = parseFloat(document.getElementById('r-ing-gram').value)||0;
+  var eenheid = document.getElementById('r-ing-eenheid').value||'g';
+
+  // Zoek per-100g waarden in voorraad/diepvries
+  var vrItem = vr.find(function(x){return x.naam.toLowerCase()===naam.toLowerCase();});
+  var dvItem = dv.find(function(x){return x.naam.toLowerCase()===naam.toLowerCase();});
+  var kcal100=0, ei100=0, kh100=0, vet100=0, vez100=0;
+  if(vrItem && vrItem.kcal100){
+    kcal100=vrItem.kcal100; ei100=vrItem.ei100||0; kh100=vrItem.kh100||0; vet100=vrItem.vet100||0; vez100=vrItem.vez100||0;
+  } else if(dvItem && (dvItem.bulk||dvItem.kcal100)){
+    kcal100=dvItem.kcal100||0; ei100=dvItem.ei100||0; kh100=dvItem.kh100||0; vet100=dvItem.vet100||0; vez100=dvItem.vez100||0;
+  } else {
+    return; // Geen bekende per-100g waarden, handmatig invullen
+  }
+
+  if(gram <= 0) return;
+  var factor;
+  if(eenheid==='kg')     factor = gram * 10;
+  else if(eenheid==='l') factor = gram * 10;
+  else                   factor = gram / 100;
+
+  document.getElementById('r-ing-kcal').value = Math.round(kcal100 * factor * 10) / 10;
+  document.getElementById('r-ing-ei').value   = Math.round(ei100   * factor * 10) / 10;
+  document.getElementById('r-ing-kh').value   = Math.round(kh100   * factor * 10) / 10;
+  document.getElementById('r-ing-vet').value  = Math.round(vet100  * factor * 10) / 10;
+  document.getElementById('r-ing-vez').value  = Math.round(vez100  * factor * 10) / 10;
 }
 
 function voegIngToe(){
