@@ -1043,10 +1043,33 @@ function zoekRIngredient(){
   var q = document.getElementById('r-ing-nieuw').value.toLowerCase().trim();
   var drop = document.getElementById('r-ing-drop');
   if(!q || q.length < 1){drop.style.display='none';return;}
-  var vrRes = vr.filter(function(p){return p.naam.toLowerCase().includes(q) && p.kcal100;});
-  var dvRes = dv.filter(function(p){return p.naam.toLowerCase().includes(q) && (p.bulk||p.kcal100);});
-  _rIngResults = vrRes.map(function(p){return {naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'voorraad'};})
-    .concat(dvRes.map(function(p){return {naam:p.naam,kcal:p.kcal100,ei:p.ei100||0,kh:p.kh100||0,vet:p.vet100||0,vez:p.vez100||0,bron:'diepvries'};}));
+  var vrRes = vr.filter(function(p){return p.naam.toLowerCase().includes(q) && (p.kcal100||p.kcalPor);});
+  var dvRes = dv.filter(function(p){return p.naam.toLowerCase().includes(q) && (p.bulk||p.kcal100||p.kcal);});
+  _rIngResults = vrRes.map(function(p){
+    var isVaste = p.vaste_portie;
+    return {
+      naam:p.naam,
+      kcal:isVaste?p.kcalPor:p.kcal100,
+      ei:isVaste?(p.eiPor||0):(p.ei100||0),
+      kh:isVaste?(p.khPor||0):(p.kh100||0),
+      vet:isVaste?(p.vetPor||0):(p.vet100||0),
+      vez:isVaste?(p.vezPor||0):(p.vez100||0),
+      eenheid:p.unit||'g',
+      bron:'voorraad'
+    };
+  }).concat(dvRes.map(function(p){
+    var isBulk = p.bulk;
+    return {
+      naam:p.naam,
+      kcal:isBulk?p.kcal100:p.kcal,
+      ei:isBulk?(p.ei100||0):(p.ei||0),
+      kh:isBulk?(p.kh100||0):(p.kh||0),
+      vet:isBulk?(p.vet100||0):(p.vet||0),
+      vez:isBulk?(p.vez100||0):(p.vez||0),
+      eenheid:isBulk?(p.eenheid||'g'):'portie',
+      bron:'diepvries'
+    };
+  }));
   if(!_rIngResults.length){drop.style.display='none';return;}
   drop.style.display='block';
   drop.innerHTML = _rIngResults.map(function(r,idx){
@@ -1062,16 +1085,23 @@ function zoekRIngredient(){
 function selectRIngIdx(idx){
   var r = _rIngResults[idx];
   if(!r) return;
-  selectRIng(r.naam, r.kcal, r.ei, r.kh, r.vet, r.vez);
+  selectRIng(r.naam, r.kcal, r.ei, r.kh, r.vet, r.vez, r.eenheid);
 }
 
-function selectRIng(naam,kcal,ei,kh,vet,vez){
+function selectRIng(naam,kcal,ei,kh,vet,vez,eenheid){
   document.getElementById('r-ing-nieuw').value = naam;
   document.getElementById('r-ing-kcal').value = kcal;
   document.getElementById('r-ing-ei').value   = ei;
   document.getElementById('r-ing-kh').value   = kh;
   document.getElementById('r-ing-vet').value  = vet;
   document.getElementById('r-ing-vez').value  = vez;
+  // Zet eenheid op basis van product
+  var eenhEl = document.getElementById('r-ing-eenheid');
+  if(eenhEl && eenheid){
+    // Vertaal voorraad/diepvries eenheden naar recept eenheden
+    var map = {stuks:'stuks',portie:'portie',g:'g',kg:'kg',ml:'ml',l:'l'};
+    eenhEl.value = map[eenheid] || 'g';
+  }
   document.getElementById('r-ing-drop').style.display='none';
   document.getElementById('r-ing-gram').focus();
 }
@@ -1103,10 +1133,12 @@ function previewIngWaarden(){
   }
 
   if(gram <= 0) return;
+  var perStuk = ['stuks','portie','el','tl'].includes(eenheid);
   var factor;
   if(eenheid==='kg')     factor = gram * 10;
   else if(eenheid==='l') factor = gram * 10;
-  else                   factor = gram / 100;
+  else if(perStuk)       factor = gram;       // waarden zijn per stuk, niet per 100g
+  else                   factor = gram / 100; // g, ml
 
   document.getElementById('r-ing-kcal').value = Math.round(kcal100 * factor * 10) / 10;
   document.getElementById('r-ing-ei').value   = Math.round(ei100   * factor * 10) / 10;
@@ -1143,11 +1175,12 @@ function voegIngToe(){
   }
 
   // Bereken totaal voor dit ingredient
+  var perStuk = ['stuks','portie','el','tl'].includes(eenheid);
   var factor;
   if(eenheid==='kg')       factor = gram * 10;
   else if(eenheid==='l')   factor = gram * 10;
-  else if(isPer100)        factor = gram / 100;
-  else                     factor = gram > 0 ? gram : 1;
+  else if(perStuk)         factor = gram > 0 ? gram : 1;  // per stuk
+  else                     factor = gram / 100;             // per 100g/ml
   var kcal = Math.round(kcal100 * factor * 10) / 10;
   var ei   = Math.round(ei100   * factor * 10) / 10;
   var kh   = Math.round(kh100   * factor * 10) / 10;
