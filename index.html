@@ -442,7 +442,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 //  CONFIGURATIE — pas dit aan voordat je deployt
 // ══════════════════════════════════════════════════════════
 
-/ Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
+// Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
 // Stap 1: Ga naar https://emn178.github.io/online-tools/sha256.html
 // Stap 2: Typ je wachtwoord in en kopieer de hash
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
@@ -1385,7 +1385,7 @@ function delDv(i){if(!confirm('Verwijder '+dv[i].naam+'?'))return;dv.splice(i,1)
 function dvQ(i,d){if(dv[i].por!==99)dv[i].por=Math.max(0,dv[i].por+d);rdv();scheduleSync('saveDV',dv);}
 function dvDBbulk(ri){
   const p=dv[ri];const el=document.getElementById('bulk-g-'+ri);const g=parseFloat((el&&el.value)||50);
-  st('dagboek');
+  st('dagboek');window.scrollTo(0,0);
   clearP100();
   document.getElementById('f-desc').value=p.naam;
   document.getElementById('f-kcal').value=Math.round(p.kcal100*g/100*10)/10;
@@ -1399,7 +1399,7 @@ function dvDBbulk(ri){
   setT();
 }
 function dvDB(i){
-  const p=dv[i];st('dagboek');
+  const p=dv[i];st('dagboek');window.scrollTo(0,0);
   clearP100(); _typeHandmatig=false;
   document.getElementById('f-desc').value=p.naam;
   // Sla als vastePorData op zodat aantal aanpasbaar is
@@ -1475,7 +1475,7 @@ function rvr(){
 function vrF(c){vrCF=c;rvr();}
 
 function vrNaarDagboek(ri){
-  const p=vr[ri];st('dagboek');
+  const p=vr[ri];st('dagboek');window.scrollTo(0,0);
   clearP100();
   document.getElementById('f-desc').value=p.naam;
   if(p.vaste_portie){
