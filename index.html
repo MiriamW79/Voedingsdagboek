@@ -955,12 +955,58 @@ function addEntry(){
   if(ws.length){wb.style.display='block';wb.innerHTML=ws.join('<br>');if(!confirm('Waarschuwingen:\n\n'+ws.join('\n')+'\n\nToch toevoegen?'))return;}
   else wb.style.display='none';
   if(!db[k])db[k]=[];
-  db[k].push({type:document.getElementById('f-type').value,time:document.getElementById('f-time').value,desc,por:document.getElementById('f-por').value,kcal:document.getElementById('f-kcal').value,ei:document.getElementById('f-ei').value,kh:document.getElementById('f-kh')&&document.getElementById('f-kh').value||0,vet:document.getElementById('f-vet')&&document.getElementById('f-vet').value||0,vez:document.getElementById('f-vez').value,vocht:document.getElementById('f-vocht').value,note:document.getElementById('f-note').value});
-  const p=dv.find(x=>x.naam===desc);if(p&&p.por!==99)p.por=Math.max(0,p.por-1);
+  var entry={type:document.getElementById('f-type').value,time:document.getElementById('f-time').value,desc,por:document.getElementById('f-por').value,kcal:document.getElementById('f-kcal').value,ei:document.getElementById('f-ei').value,kh:document.getElementById('f-kh')&&document.getElementById('f-kh').value||0,vet:document.getElementById('f-vet')&&document.getElementById('f-vet').value||0,vez:document.getElementById('f-vez').value,vocht:document.getElementById('f-vocht').value,note:document.getElementById('f-note').value};
+  db[k].push(entry);
+  // Verminder voorraad/diepvries
+  var dvP=dv.find(function(x){return x.naam===desc;});
+  var vrP=vr.find(function(x){return x.naam===desc;});
+  var aantalVr = 1;
+  if(vrP){
+    // Per gram/ml product: altijd met 1 verminderen (1 gebruik)
+    var isPerGram = ['g','kg','ml','l'].includes((vrP.unit||'').toLowerCase());
+    aantalVr = isPerGram ? 1 : haalAantalUitPor(entry.por);
+  }
+  var aantalDv = 1;
+  if(dvP && !dvP.bulk){
+    aantalDv = haalAantalUitPor(entry.por);
+  }
+  if(dvP&&dvP.por!==99) dvP.por=Math.max(0,dvP.por-aantalDv);
+  if(vrP&&vrP.qty!==99) vrP.qty=Math.max(0,vrP.qty-aantalVr);
+  if(dvP) scheduleSync('saveDV',dv);
+  if(vrP) scheduleSync('saveVR',vr);
   clrForm();upd();scheduleSyncDB();
 }
 function clrForm(){['f-desc','f-por','f-kcal','f-ei','f-kh','f-vet','f-vez','f-vocht','f-note'].forEach(id=>{var e=document.getElementById(id);if(e)e.value='';});document.getElementById('f-warn').style.display='none';clearP100();_typeHandmatig=false;_huidigeEenheid='';setT();}
-function delE(k,i){if(!confirm('Verwijder?'))return;db[k].splice(i,1);upd();scheduleSyncDB();}
+function haalAantalUitPor(por){
+  // Haal het aantal uit de portiestring: "2× 1 kop" → 2, "3 stuks" → 3, "1 portie" → 1
+  if(!por) return 1;
+  var m = String(por).match(/^(\d+(?:[.,]\d+)?)\s*[×x]/);
+  if(m) return parseFloat(m[1].replace(',','.'));
+  m = String(por).match(/^(\d+(?:[.,]\d+)?)/);
+  if(m) return parseFloat(m[1].replace(',','.'));
+  return 1;
+}
+
+function delE(k,i){
+  if(!confirm('Verwijder?'))return;
+  var entry=db[k][i];
+  db[k].splice(i,1);
+  // Voeg terug aan voorraad/diepvries
+  var dvP=dv.find(function(x){return x.naam===entry.desc;});
+  var vrP=vr.find(function(x){return x.naam===entry.desc;});
+  var aantalVr = 1;
+  if(vrP){
+    var isPerGram = ['g','kg','ml','l'].includes((vrP.unit||'').toLowerCase());
+    aantalVr = isPerGram ? 1 : haalAantalUitPor(entry.por);
+  }
+  var aantalDv = 1;
+  if(dvP && !dvP.bulk) aantalDv = haalAantalUitPor(entry.por);
+  if(dvP&&dvP.por!==99) dvP.por=dvP.por+aantalDv;
+  if(vrP&&vrP.qty!==99) vrP.qty=vrP.qty+aantalVr;
+  if(dvP) scheduleSync('saveDV',dv);
+  if(vrP) scheduleSync('saveVR',vr);
+  upd();scheduleSyncDB();
+}
 
 function pbar(v,mx,c){const p=Math.min(100,Math.round(v/mx*100));return `<div class="pbar"><div class="pfill" style="width:${p}%;background:${c}"></div></div>`;}
 
