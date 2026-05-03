@@ -2004,21 +2004,42 @@ function bewerkEntry(k, i){
     clearP100();
   }
 
-  // Haal huidig aantal uit portie string (bijv. "2 kop (145ml)" → 2)
+  // Haal huidig aantal uit portie string (bijv. "2 kop (145ml)" → 2, "3 porties" → 3)
   var huidigAantal = 1;
-  if(heeftVastePor || (dvItem && !dvItem.bulk)){
-    var m = String(x.por||'').match(/^(\d+(?:[.,]\d+)?)/);
-    if(m) huidigAantal = parseFloat(m[1].replace(',','.'));
+  var porMatch = String(x.por||'').match(/^(\d+(?:[.,]\d+)?)\s*[×x]/);
+  if(porMatch) huidigAantal = parseFloat(porMatch[1].replace(',','.'));
+  else {
+    var porMatch2 = String(x.por||'').match(/^(\d+(?:[.,]\d+)?)/);
+    if(porMatch2) huidigAantal = parseFloat(porMatch2[1].replace(',','.'));
   }
 
-  var heeftAantal = heeftVastePor || (dvItem && !dvItem.bulk);
+  // Toon aantal-veld altijd als er een getal in de portie zit en er per-portie waarden zijn
+  var heeftAantal = heeftVastePor || (dvItem && !dvItem.bulk) || (window._modalVastePor !== null);
+  // Als geen vastePorData maar wel een portiegetal: maak vastePorData op basis van huidige waarden ÷ huidigAantal
+  if(!window._modalVastePor && huidigAantal > 0 && !heeftPer100g){
+    window._modalVastePor = {
+      kcal:  Math.round((parseFloat(x.kcal)||0) / huidigAantal * 10) / 10,
+      ei:    Math.round((parseFloat(x.ei)||0)   / huidigAantal * 10) / 10,
+      vez:   Math.round((parseFloat(x.vez)||0)  / huidigAantal * 10) / 10,
+      vocht: Math.round((parseFloat(x.vocht)||0)/ huidigAantal),
+      kh:    Math.round((parseFloat(x.kh)||0)   / huidigAantal * 10) / 10,
+      vet:   Math.round((parseFloat(x.vet)||0)  / huidigAantal * 10) / 10,
+      omschr: '1 portie'
+    };
+    heeftAantal = true;
+  }
+
   var aantalRij = heeftAantal ? `
       <div><div class="lbl">Aantal</div>
-        <input type="number" id="m-aantal" value="${huidigAantal}" min="0.5" step="0.5" oninput="herbereken_aantal()">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="qb" onclick="var e=document.getElementById('m-aantal');e.value=Math.max(0.5,Math.round((parseFloat(e.value)-0.5)*2)/2);herbereken_aantal()">-</button>
+          <input type="number" id="m-aantal" value="${huidigAantal}" min="0.5" step="0.5" style="width:60px;text-align:center" oninput="herbereken_aantal()">
+          <button class="qb" onclick="var e=document.getElementById('m-aantal');e.value=Math.round((parseFloat(e.value)+0.5)*2)/2;herbereken_aantal()">+</button>
+        </div>
       </div>
-      <div style="align-self:end;padding-bottom:4px;font-size:12px;color:#888">${window._modalVastePor?window._modalVastePor.omschr:''} per stuk</div>` : '';
+      <div style="align-self:center;font-size:12px;color:#888">${window._modalVastePor?window._modalVastePor.omschr:''} per stuk</div>` : '';
 
-  var porTip = (heeftVastePor || (dvItem && !dvItem.bulk))
+  var porTip = heeftAantal
     ? 'Pas het aantal aan — kcal en voedingswaarden worden automatisch herberekend.'
     : heeftPer100g
       ? 'Pas de portie aan in gram — kcal en voedingswaarden worden automatisch herberekend.'
