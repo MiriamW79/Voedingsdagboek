@@ -442,7 +442,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 //  CONFIGURATIE — pas dit aan voordat je deployt
 // ══════════════════════════════════════════════════════════
 
-// Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
+/ Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
 // Stap 1: Ga naar https://emn178.github.io/online-tools/sha256.html
 // Stap 2: Typ je wachtwoord in en kopieer de hash
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
@@ -1737,79 +1737,145 @@ function scheduleSync(action,data){
   if(!SHEETS_URL)return;
   _pendingSyncs++;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(function(){
-    syncStatus.saving=true;showSyncBar();
-    var dataJson=JSON.stringify(data);
-    var params=new URLSearchParams();
-    params.append('pw',SHEETS_PW);
-    params.append('action',action);
-    params.append('data',dataJson);
-    fetch(SHEETS_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:params.toString()
-    }).then(function(){
+  saveTimer=setTimeout(function(){ doSync(action, data, 0); }, 1500);
+}
+
+function doSync(action, data, poging){
+  syncStatus.saving=true;showSyncBar();
+  var dataJson=JSON.stringify(data);
+  var params=new URLSearchParams();
+  params.append('pw',SHEETS_PW);
+  params.append('action',action);
+  params.append('data',dataJson);
+  fetch(SHEETS_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:params.toString()
+  }).then(function(){
+    // Wacht even en verifieer dan via GET
+    setTimeout(function(){ verifySync(action, data, poging); }, 3000);
+  }).catch(function(){
+    if(poging < 3){
+      setTimeout(function(){ doSync(action, data, poging+1); }, 3000);
+    } else {
       _pendingSyncs=Math.max(0,_pendingSyncs-1);
       syncStatus.saving=false;
-      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-      syncStatus.error=null;
+      syncStatus.error='Sync mislukt na 3 pogingen';
       showSyncBar();
-    }).catch(function(){
-      var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action='+action+'&data='+encodeURIComponent(dataJson);
-      var img=new Image();
-      img.onload=img.onerror=function(){
+    }
+  });
+}
+
+function verifySync(action, data, poging){
+  fetch(SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load')
+    .then(function(r){ return r.json(); })
+    .then(function(serverData){
+      // Controleer of de opgeslagen data overeenkomt
+      var sleutel = {saveVR:'vr',saveDV:'dv',saveGW:'gewicht',saveSP:'sport'}[action];
+      var lokaalAantal = Array.isArray(data) ? data.length : Object.keys(data).length;
+      var serverAantal = sleutel && serverData[sleutel] ?
+        (Array.isArray(serverData[sleutel]) ? serverData[sleutel].length : Object.keys(serverData[sleutel]).length) : -1;
+      if(serverAantal >= lokaalAantal || serverAantal === -1){
         _pendingSyncs=Math.max(0,_pendingSyncs-1);
         syncStatus.saving=false;
         syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
         syncStatus.error=null;
         showSyncBar();
-      };
-      img.src=url;
+      } else if(poging < 3){
+        setTimeout(function(){ doSync(action, data, poging+1); }, 2000);
+      } else {
+        _pendingSyncs=Math.max(0,_pendingSyncs-1);
+        syncStatus.saving=false;
+        syncStatus.error='Sync onzeker — controleer je verbinding';
+        showSyncBar();
+      }
+    })
+    .catch(function(){
+      _pendingSyncs=Math.max(0,_pendingSyncs-1);
+      syncStatus.saving=false;
+      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      syncStatus.error=null;
+      showSyncBar();
     });
-  },1500);
 }
 
-// Dagboek sync: gebruik POST via no-cors (geen response maar data komt wel aan)
+// Dagboek sync met verificatie en retry
 var dbSaveTimer=null;
+var _dbSaveRetries={};
+
 function scheduleSyncDB(){
   if(!SHEETS_URL)return;
   var k=getTK();
-  var entries=db[k]||[];
   clearTimeout(dbSaveTimer);
   _pendingSyncs++;
   dbSaveTimer=setTimeout(function(){
-    syncStatus.saving=true;showSyncBar();
-    var entries_json=JSON.stringify(entries);
-    var params=new URLSearchParams();
-    params.append('pw', SHEETS_PW);
-    params.append('action', 'saveDAG');
-    params.append('datum', k);
-    params.append('data', entries_json);
-    fetch(SHEETS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: params.toString()
-    }).then(function(){
+    doSyncDB(k, 0);
+  },1500);
+}
+
+function doSyncDB(k, poging){
+  var entries=db[k]||[];
+  var entries_json=JSON.stringify(entries);
+  syncStatus.saving=true;showSyncBar();
+
+  var params=new URLSearchParams();
+  params.append('pw', SHEETS_PW);
+  params.append('action', 'saveDAG');
+  params.append('datum', k);
+  params.append('data', entries_json);
+
+  fetch(SHEETS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: params.toString()
+  }).then(function(){
+    // no-cors geeft geen bevestiging — verifieer na 3 seconden via GET
+    setTimeout(function(){ verifySyncDB(k, entries.length, poging); }, 3000);
+  }).catch(function(){
+    if(poging < 3){
+      setTimeout(function(){ doSyncDB(k, poging+1); }, 3000);
+    } else {
       _pendingSyncs=Math.max(0,_pendingSyncs-1);
       syncStatus.saving=false;
-      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-      syncStatus.error=null;
+      syncStatus.error='Dagboek sync mislukt na 3 pogingen';
       showSyncBar();
-    }).catch(function(e){
-      var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=saveDAG&datum='+encodeURIComponent(k)+'&data='+encodeURIComponent(entries_json);
-      var img=new Image();
-      img.onload=img.onerror=function(){
+    }
+  });
+}
+
+function verifySyncDB(k, verwachtAantal, poging){
+  // Controleer via GET of de data daadwerkelijk in Sheets staat
+  fetch(SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var opgeslagen = data.db && data.db[k] ? data.db[k].length : 0;
+      if(opgeslagen >= verwachtAantal){
+        // Verificatie geslaagd
         _pendingSyncs=Math.max(0,_pendingSyncs-1);
         syncStatus.saving=false;
         syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
         syncStatus.error=null;
         showSyncBar();
-      };
-      img.src=url;
+      } else if(poging < 3){
+        // Data niet of onvolledig opgeslagen — opnieuw proberen
+        setTimeout(function(){ doSyncDB(k, poging+1); }, 2000);
+      } else {
+        _pendingSyncs=Math.max(0,_pendingSyncs-1);
+        syncStatus.saving=false;
+        syncStatus.error='Sync onzeker — controleer je verbinding';
+        showSyncBar();
+      }
+    })
+    .catch(function(){
+      // Verificatie mislukt (bijv. offline) — neem aan dat sync OK was
+      _pendingSyncs=Math.max(0,_pendingSyncs-1);
+      syncStatus.saving=false;
+      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      syncStatus.error=null;
+      showSyncBar();
     });
-  },1500);
 }
 
 // ── BEWERK GEWICHT ──
