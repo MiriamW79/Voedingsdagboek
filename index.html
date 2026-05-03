@@ -1963,44 +1963,47 @@ function bewerkEntry(k, i){
   var vrItem = vr.find(function(p){return p.naam.toLowerCase().trim()===descLower;});
   var dvItem = dv.find(function(p){return p.naam.toLowerCase().trim()===descLower;});
 
-  // Sla basiswaarden op voor herberekening - zoek ook in diepvries bulk
+  // Sla basiswaarden op voor herberekening - zoek ook in diepvries
   var heeftVastePor = vrItem && vrItem.vaste_portie;
-  // Als niet gevonden in voorraad, probeer diepvries
   if(!vrItem && !dvItem){
     dvItem = dv.find(function(p){ return p.naam.toLowerCase().trim()===descLower && p.bulk; });
     if(!dvItem) dvItem = dv.find(function(p){ return p.naam.toLowerCase().trim()===descLower; });
   }
-  var heeftPer100g  = (vrItem && vrItem.kcal100 && !vrItem.vaste_portie) || (dvItem && dvItem.bulk);
+  var heeftPer100g = (vrItem && vrItem.kcal100 && !vrItem.vaste_portie) || (dvItem && dvItem.bulk);
+
+  // Bepaal eenheid van het voorraadproduct
+  var vrEenheid = vrItem ? (vrItem.unit||'').toLowerCase() : '';
+  var isStuksVR = ['stuks','stuk','pak','blik','fles','zak','portie','brood','kuip'].includes(vrEenheid);
+
+  window._modalVastePor = null;
 
   if(heeftVastePor){
+    // Vaste portie product (cappuccino etc)
     window._modalVastePor = {
-      kcal:  vrItem.kcalPor||0,
-      ei:    vrItem.eiPor||0,
-      vez:   vrItem.vezPor||0,
-      vocht: vrItem.vochtPor||0,
-      kh:    vrItem.khPor||0,
-      vet:   vrItem.vetPor||0,
-      omschr: vrItem.por_omschrijving||'1 kop'
+      kcal: vrItem.kcalPor||0, ei: vrItem.eiPor||0, vez: vrItem.vezPor||0,
+      vocht: vrItem.vochtPor||0, kh: vrItem.khPor||0, vet: vrItem.vetPor||0,
+      omschr: vrItem.por_omschrijving||'1 portie'
+    };
+  } else if(vrItem && isStuksVR){
+    // Voorraad stuks product: per-stuk waarden = kcal100 etc
+    window._modalVastePor = {
+      kcal: vrItem.kcal100||0, ei: vrItem.ei100||0, vez: vrItem.vez100||0,
+      vocht: 0, kh: vrItem.kh100||0, vet: vrItem.vet100||0,
+      omschr: '1 ' + vrEenheid
     };
   } else if(dvItem && !dvItem.bulk){
-    // Diepvries normaal product: sla als vastePorData op voor aantal-herberekening
+    // Diepvries normaal product
     window._modalVastePor = {
-      kcal:  dvItem.kcal||0,
-      ei:    dvItem.ei||0,
-      vez:   dvItem.vez||0,
-      vocht: 0,
-      kh:    dvItem.kh||0,
-      vet:   dvItem.vet||0,
+      kcal: dvItem.kcal||0, ei: dvItem.ei||0, vez: dvItem.vez||0,
+      vocht: 0, kh: dvItem.kh||0, vet: dvItem.vet||0,
       omschr: '1 portie'
     };
-  } else {
-    window._modalVastePor = null;
   }
 
   if(heeftPer100g){
     var src = vrItem || dvItem;
     setP100(src.kcal100||0, src.ei100||0, src.vez100||0, 0, src.kh100||0, src.vet100||0);
-  } else if(!heeftVastePor){
+  } else if(!heeftVastePor && !isStuksVR){
     clearP100();
   }
 
@@ -2015,15 +2018,15 @@ function bewerkEntry(k, i){
 
   // Toon aantal-veld altijd als er een getal in de portie zit en er per-portie waarden zijn
   var heeftAantal = heeftVastePor || (dvItem && !dvItem.bulk) || (window._modalVastePor !== null);
-  // Als geen vastePorData maar wel een portiegetal: maak vastePorData op basis van huidige waarden ÷ huidigAantal
-  if(!window._modalVastePor && huidigAantal > 0 && !heeftPer100g){
+  // Fallback: geen match in vr/dv maar wel portiegetal → bereken per-stuk waarden
+  if(!window._modalVastePor && huidigAantal > 1 && !heeftPer100g){
     window._modalVastePor = {
-      kcal:  Math.round((parseFloat(x.kcal)||0) / huidigAantal * 10) / 10,
-      ei:    Math.round((parseFloat(x.ei)||0)   / huidigAantal * 10) / 10,
-      vez:   Math.round((parseFloat(x.vez)||0)  / huidigAantal * 10) / 10,
-      vocht: Math.round((parseFloat(x.vocht)||0)/ huidigAantal),
-      kh:    Math.round((parseFloat(x.kh)||0)   / huidigAantal * 10) / 10,
-      vet:   Math.round((parseFloat(x.vet)||0)  / huidigAantal * 10) / 10,
+      kcal:  Math.round((parseFloat(x.kcal)||0)  / huidigAantal * 10) / 10,
+      ei:    Math.round((parseFloat(x.ei)||0)    / huidigAantal * 10) / 10,
+      vez:   Math.round((parseFloat(x.vez)||0)   / huidigAantal * 10) / 10,
+      vocht: Math.round((parseFloat(x.vocht)||0) / huidigAantal),
+      kh:    Math.round((parseFloat(x.kh)||0)    / huidigAantal * 10) / 10,
+      vet:   Math.round((parseFloat(x.vet)||0)   / huidigAantal * 10) / 10,
       omschr: '1 portie'
     };
     heeftAantal = true;
