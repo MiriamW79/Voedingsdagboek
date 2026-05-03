@@ -148,7 +148,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
       <div><div class="lbl">Type</div>
         <select id="f-type" onchange="_typeHandmatig=true;herbereken()">
           <option>Ontbijt</option><option>Ochtend drankje</option><option>Lunch</option>
-          <option>Diner</option><option>Tussendoortje</option><option>Drinken</option><option>Smoothie</option>
+          <option>Diner</option><option>Dessert</option><option>Tussendoortje</option><option>Drinken</option><option>Smoothie</option>
         </select>
       </div>
       <div><div class="lbl">Tijd</div><input type="time" id="f-time"></div>
@@ -240,7 +240,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
     <div class="fgrid">
       <div class="full"><div class="lbl">Receptnaam</div><input type="text" id="r-naam" placeholder="bijv. Erwtensoep"></div>
       <div><div class="lbl">Categorie</div>
-        <select id="r-cat"><option>Soep</option><option>Maaltijd</option><option>Vlees</option><option>Vis</option><option>Vegetarisch</option><option>Ontbijt</option><option>Snack</option><option>Overig</option></select>
+        <select id="r-cat"><option>Soep</option><option>Maaltijd</option><option>Vlees</option><option>Vis</option><option>Vegetarisch</option><option>Groente</option><option>Ontbijt</option><option>Snack</option><option>Overig</option></select>
       </div>
       <div><div class="lbl">Aantal porties</div><input type="number" id="r-por" value="4" min="1" onchange="berekenReceptTotaal()"></div>
       <div><div class="lbl">Bereidingstijd</div><input type="text" id="r-tijd" placeholder="bijv. 4-5 uur (slowcooker)"></div>
@@ -442,7 +442,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 //  CONFIGURATIE — pas dit aan voordat je deployt
 // ══════════════════════════════════════════════════════════
 
-// Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
 // Stap 1: Ga naar https://emn178.github.io/online-tools/sha256.html
 // Stap 2: Typ je wachtwoord in en kopieer de hash
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
@@ -549,7 +548,7 @@ recepten=[{
 }];
 
 const CC={Soep:'bg-teal',Maaltijd:'bg-blue',Vlees:'bg-amber',Smoothie:'bg-purple',Ontbijt:'bg-green',Groenten:'bg-green',Overig:'bg-gray',Vis:'bg-blue',Snack:'bg-amber'};
-const TI={Ontbijt:'🍳','Ochtend drankje':'☕',Lunch:'🥗',Diner:'🍽',Tussendoortje:'🍎',Drinken:'💧',Smoothie:'🥤'};
+const TI={Ontbijt:'🍳','Ochtend drankje':'☕',Lunch:'🥗',Diner:'🍽',Dessert:'🍮',Tussendoortje:'🍎',Drinken:'💧',Smoothie:'🥤'};
 
 const START_DB = {
   '2026-04-21':[
@@ -1078,7 +1077,17 @@ function addSport(){
 }
 function delSport(k,i){if(!confirm('Verwijder?'))return;sprt[k].splice(i,1);rs();upd();scheduleSync('saveSP',sprt);}
 
-function toggleNieuwRecept(){const f=document.getElementById('nieuw-recept-form');f.style.display=f.style.display==='none'?'block':'none';}
+function toggleNieuwRecept(){
+  const f=document.getElementById('nieuw-recept-form');
+  var open = f.style.display==='none';
+  f.style.display=open?'block':'none';
+  if(open){
+    // Reset ingrediëntenlijst bij openen
+    rIngLijst=[];
+    renderIngLijst();
+    berekenReceptTotaal();
+  }
+}
 // Ingrediënten lijst voor nieuw recept
 var rIngLijst = [];
 
@@ -1251,6 +1260,7 @@ function clrRIng(){
 
 function renderIngLijst(){
   var el = document.getElementById('r-ing-lijst');
+  if(!el) return; // element nog niet in DOM
   if(!rIngLijst.length){el.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 0">Nog geen ingrediënten toegevoegd.</div>';return;}
   el.innerHTML = rIngLijst.map(function(ing,i){
     var eenheid = ing.eenheid||'g';
@@ -1304,7 +1314,9 @@ function berekenReceptTotaal(){
   var totKh   = rIngLijst.reduce(function(s,x){return s+(x.kh||0);},0);
   var totVet  = rIngLijst.reduce(function(s,x){return s+(x.vet||0);},0);
   var totVez  = rIngLijst.reduce(function(s,x){return s+(x.vez||0);},0);
+  // Alleen updaten als elementen in DOM staan (formulier zichtbaar)
   var setEl = function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  if(!document.getElementById('r-tot-kcal')) return;
   setEl('r-tot-kcal', Math.round(totKcal*10)/10);
   setEl('r-tot-ei',   Math.round(totEi*10)/10);
   setEl('r-tot-vez',  Math.round(totVez*10)/10);
@@ -1954,7 +1966,7 @@ function bewerkEntry(k, i){
   modalType='entry'; modalIdx={k:k, i:i};
   var x = db[k][i];
   document.getElementById('bewerk-titel').textContent = 'Invoer bewerken';
-  var types = ['Ontbijt','Ochtend drankje','Lunch','Diner','Tussendoortje','Drinken','Smoothie'];
+  var types = ['Ontbijt','Ochtend drankje','Lunch','Diner','Dessert','Tussendoortje','Drinken','Smoothie'];
   var typeOpts = types.map(t => '<option value="'+t+'"'+(t===x.type?' selected':'')+'>'+t+'</option>').join('');
 
   // Zoek het bijbehorende voorraad- of diepvries-product voor herberekening
