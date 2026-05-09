@@ -926,15 +926,17 @@ function selS(n,bron){
       if(!_typeHandmatig)document.getElementById('f-type').value=(eenheid==='l'||eenheid==='ml')?'Drinken':'Tussendoortje';
       setP100(p.kcal100||0, p.ei100||0, p.vez100||0, (eenheid==='l'||eenheid==='ml')?100:0, p.kh100||0, p.vet100||0);
     } else {
+      // Diepvries normaal product (portie-gebaseerd) — toon aantal-veld
       _huidigeEenheid='';
-      document.getElementById('f-kcal').value=p.kcal;
-      document.getElementById('f-ei').value=p.ei;
-      var khEl3=document.getElementById('f-kh');if(khEl3)khEl3.value=p.kh||0;
-      var vetEl3=document.getElementById('f-vet');if(vetEl3)vetEl3.value=p.vet||0;
-      document.getElementById('f-vez').value=p.vez||0;
-      document.getElementById('f-vocht').value=p.vocht||0;
-      document.getElementById('f-por').value='1 portie';
-      if(!_typeHandmatig)if(!_typeHandmatig)document.getElementById('f-type').value=p.cat==='Smoothie'?'Smoothie':p.cat==='Soep'?'Lunch':'Diner';
+      _vastePorData = {
+        kcal: p.kcal||0, ei: p.ei||0, vez: p.vez||0,
+        kh: p.kh||0, vet: p.vet||0, vocht: p.vocht||0,
+        omschr: '1 portie'
+      };
+      var wrapDV = document.getElementById('f-aantal-wrap');
+      if(wrapDV){wrapDV.style.display='block'; document.getElementById('f-aantal').value=1;}
+      if(!_typeHandmatig)document.getElementById('f-type').value=p.cat==='Smoothie'?'Smoothie':p.cat==='Soep'?'Lunch':'Diner';
+      herbereken();
     }
   }
   document.getElementById('s-drop').style.display='none';
@@ -980,7 +982,6 @@ function addEntry(){
   clrForm();upd();scheduleSyncDB();
 }
 function clrForm(){
-  console.log('clrForm aangeroepen', new Error().stack);
   ['f-desc','f-por','f-kcal','f-ei','f-kh','f-vet','f-vez','f-vocht','f-note'].forEach(id=>{var e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('f-warn').style.display='none';clearP100();_typeHandmatig=false;_huidigeEenheid='';setT();
 }
@@ -1473,13 +1474,10 @@ function dvDB(i){
     kh: p.kh||0, vet: p.vet||0, vocht: 0,
     omschr: '1 portie'
   };
-  console.log('dvDB: _vastePorData ingesteld', _vastePorData);
   var wrap = document.getElementById('f-aantal-wrap');
   if(wrap){wrap.style.display='block'; document.getElementById('f-aantal').value=1;}
-  console.log('dvDB: wrap na instellen:', wrap ? wrap.style.display : 'niet gevonden');
   if(!_typeHandmatig)document.getElementById('f-type').value=p.cat==='Smoothie'?'Smoothie':p.cat==='Soep'?'Lunch':'Diner';
   herbereken();
-  console.log('dvDB: na herbereken, _vastePorData:', _vastePorData, 'wrap:', wrap?wrap.style.display:'?');
   setT();
 }
 function addDv(){
