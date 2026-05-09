@@ -814,6 +814,10 @@ function clearP100(){
   var wrap = document.getElementById('f-aantal-wrap');
   if(wrap) wrap.style.display = 'none';
 }
+function resetP100Only(){
+  // Reset alleen per100g, laat _vastePorData en wrap onaangeroerd
+  per100g = null;
+}
 
 // Huidige eenheid van geselecteerd product (voor vocht herberekening)
 var _huidigeEenheid = '';
@@ -871,7 +875,7 @@ function herbereken(){
 
 function selS(n,bron){
   bron=bron||'diepvries';
-  clearP100();
+  per100g=null; _vastePorData=null; _huidigeEenheid="";
   if(bron==='voorraad'){
     var p=vr.find(x=>x.naam===n);
     if(!p)return;
@@ -1458,7 +1462,7 @@ function dvDBbulk(ri){
 }
 function dvDB(i){
   const p=dv[i];st('dagboek');window.scrollTo(0,0);
-  clearP100(); _typeHandmatig=false;
+  per100g=null; _typeHandmatig=false; _huidigeEenheid='';
   document.getElementById('f-desc').value=p.naam;
   // Sla als vastePorData op zodat aantal aanpasbaar is
   _vastePorData = {
@@ -1534,7 +1538,7 @@ function vrF(c){vrCF=c;rvr();}
 
 function vrNaarDagboek(ri){
   const p=vr[ri];st('dagboek');window.scrollTo(0,0);
-  clearP100();
+  per100g=null; _vastePorData=null; _huidigeEenheid="";
   document.getElementById('f-desc').value=p.naam;
   if(p.vaste_portie){
     _vastePorData = {kcal:p.kcalPor||0, ei:p.eiPor||0, vez:p.vezPor||0, vocht:p.vochtPor||0, kh:p.khPor||0, vet:p.vetPor||0, omschr:p.por_omschrijving||'1 portie'};
