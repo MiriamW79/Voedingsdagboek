@@ -2027,6 +2027,9 @@ function bewerkEntry(k, i){
     var porMatch2 = String(x.por||'').match(/^(\d+(?:[.,]\d+)?)/);
     if(porMatch2) huidigAantal = parseFloat(porMatch2[1].replace(',','.'));
   }
+  // Sla origineel aantal op zodat we bij opslaan het verschil kunnen verrekenen
+  window._origAantal = huidigAantal;
+  window._origDesc = x.desc;
 
   // Toon aantal-veld altijd als er een getal in de portie zit en er per-portie waarden zijn
   var heeftAantal = heeftVastePor || (dvItem && !dvItem.bulk) || (window._modalVastePor !== null);
@@ -2187,7 +2190,7 @@ function bewerkRecept(ri){
   var r=recepten[ri];
   modalIngLijst = JSON.parse(JSON.stringify(r.ingData||[]));
   document.getElementById('bewerk-titel').textContent='Recept bewerken: '+r.naam;
-  var cats=['Soep','Maaltijd','Vlees','Vis','Vegetarisch','Ontbijt','Snack','Overig'];
+  var cats=['Soep','Maaltijd','Vlees','Vis','Vegetarisch','Groente','Ontbijt','Snack','Overig'];
   var catOpts=cats.map(c=>'<option value="'+c+'"'+(c===r.cat?' selected':'')+'>'+c+'</option>').join('');
   var gvOpts=[{v:'ja',l:'Ja'},{v:'nee',l:'Nee'},{v:'check',l:'Controleer'}].map(g=>'<option value="'+g.v+'"'+(g.v===r.gv?' selected':'')+'>'+g.l+'</option>').join('');
   var stapTekst=(r.stappen||[]).join('\n');
@@ -2359,6 +2362,25 @@ function slaModalOp(){
     x.vez    = document.getElementById('m-vez-e').value;
     x.vocht  = document.getElementById('m-vocht-e').value;
     x.note   = document.getElementById('m-note-e').value;
+    // Verwerk verschil in voorraad/diepvries als aantal gewijzigd
+    var nieuwAantal = haalAantalUitPor(x.por);
+    var origAantal = window._origAantal || 1;
+    var verschil = nieuwAantal - origAantal;
+    if(verschil !== 0 && window._origDesc === x.desc){
+      var dvP = dv.find(function(p){ return p.naam === x.desc; });
+      var vrP = vr.find(function(p){ return p.naam === x.desc; });
+      var vrEenh = vrP ? (vrP.unit||'').toLowerCase() : '';
+      var isPerGramVR = ['g','kg','ml','l'].includes(vrEenh);
+      if(dvP && dvP.por !== 99 && !dvP.bulk){
+        dvP.por = Math.max(0, dvP.por - verschil);
+        scheduleSync('saveDV', dv);
+      }
+      if(vrP && vrP.qty !== 99 && !isPerGramVR){
+        vrP.qty = Math.max(0, vrP.qty - verschil);
+        scheduleSync('saveVR', vr);
+      }
+    }
+    window._origAantal = null; window._origDesc = null;
     sluitModal(); upd(); scheduleSyncDB();
   }
   else if(modalType==='recept'){
