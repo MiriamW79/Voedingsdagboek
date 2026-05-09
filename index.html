@@ -979,7 +979,11 @@ function addEntry(){
   if(vrP) scheduleSync('saveVR',vr);
   clrForm();upd();scheduleSyncDB();
 }
-function clrForm(){['f-desc','f-por','f-kcal','f-ei','f-kh','f-vet','f-vez','f-vocht','f-note'].forEach(id=>{var e=document.getElementById(id);if(e)e.value='';});document.getElementById('f-warn').style.display='none';clearP100();_typeHandmatig=false;_huidigeEenheid='';setT();}
+function clrForm(){
+  console.log('clrForm aangeroepen', new Error().stack);
+  ['f-desc','f-por','f-kcal','f-ei','f-kh','f-vet','f-vez','f-vocht','f-note'].forEach(id=>{var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('f-warn').style.display='none';clearP100();_typeHandmatig=false;_huidigeEenheid='';setT();
+}
 function haalAantalUitPor(por){
   // Haal het aantal uit de portiestring: "2× 1 kop" → 2, "3 stuks" → 3, "1 portie" → 1
   if(!por) return 1;
@@ -1464,16 +1468,18 @@ function dvDB(i){
   const p=dv[i];st('dagboek');window.scrollTo(0,0);
   per100g=null; _typeHandmatig=false; _huidigeEenheid='';
   document.getElementById('f-desc').value=p.naam;
-  // Sla als vastePorData op zodat aantal aanpasbaar is
   _vastePorData = {
     kcal: p.kcal||0, ei: p.ei||0, vez: p.vez||0,
     kh: p.kh||0, vet: p.vet||0, vocht: 0,
     omschr: '1 portie'
   };
+  console.log('dvDB: _vastePorData ingesteld', _vastePorData);
   var wrap = document.getElementById('f-aantal-wrap');
   if(wrap){wrap.style.display='block'; document.getElementById('f-aantal').value=1;}
+  console.log('dvDB: wrap na instellen:', wrap ? wrap.style.display : 'niet gevonden');
   if(!_typeHandmatig)document.getElementById('f-type').value=p.cat==='Smoothie'?'Smoothie':p.cat==='Soep'?'Lunch':'Diner';
   herbereken();
+  console.log('dvDB: na herbereken, _vastePorData:', _vastePorData, 'wrap:', wrap?wrap.style.display:'?');
   setT();
 }
 function addDv(){
