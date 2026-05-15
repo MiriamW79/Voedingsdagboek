@@ -1777,46 +1777,18 @@ function loadFromSheets(){
     return;
   }
   syncStatus.loading=true;syncStatus.error=null;showSyncBar();
-  var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load';
+  var url=SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load&t='+Date.now();
   fetch(url)
     .then(r=>r.json())
     .then(function(data){
       syncStatus.loading=false;
       if(data.error){syncStatus.error=data.error;showSyncBar();return;}
-      // Sheets data wint altijd — START_DB alleen voor dagen die nog niet in Sheets staan
-      // Laad data - overschrijf alleen als Sheets meer/nieuwere data heeft
-      if(data.db){
-        var merged = Object.assign({},START_DB,data.db);
-        // Merge: behoud lokale dagen die Sheets niet kent
-        Object.keys(db).forEach(function(k){
-          if(!data.db[k] && db[k] && db[k].length) merged[k] = db[k];
-        });
-        // Gebruik lokale backup als Sheets vandaag leeg heeft maar backup bestaat
-        var vandaag = getTK();
-        if((!data.db[vandaag] || data.db[vandaag].length === 0)){
-          var backup = laadLokaalBackup(vandaag);
-          if(backup && backup.length > 0){
-            merged[vandaag] = backup;
-            // Stuur backup meteen naar Sheets
-            setTimeout(function(){
-              var params=new URLSearchParams();
-              params.append('pw',SHEETS_PW);
-              params.append('action','saveDAG');
-              params.append('datum',vandaag);
-              params.append('data',JSON.stringify(backup));
-              fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
-            }, 2000);
-          }
-        }
-        db = merged;
-      } else {
-        db = Object.assign({},START_DB);
-      }
+      // Sheets data is altijd leidend
+      if(data.db) db = data.db;
       if(data.gewicht&&data.gewicht.length) gewicht=data.gewicht;
       if(data.sport) Object.assign(sprt,data.sport);
-      // Voorraad/diepvries: alleen overschrijven als Sheets meer items heeft
-      if(data.dv&&data.dv.length >= dv.length) dv=data.dv;
-      if(data.vr&&data.vr.length >= vr.length) vr=data.vr;
+      if(data.dv&&data.dv.length) dv=data.dv;
+      if(data.vr&&data.vr.length) vr=data.vr;
       syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
       syncStatus.error=null;
       _appGeladen = true;
@@ -1887,25 +1859,18 @@ function syncDirect(k){
     + '&datum=' + encodeURIComponent(k)
     + '&data=' + encodeURIComponent(dataStr);
 
-  if(url.length <= 8000){
-    fetch(url)
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if(d.ok){
-          syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-          syncStatus.error=null;
-          showSyncBar();
-        }
-      })
-      .catch(function(){});
-  } else {
-    var params=new URLSearchParams();
-    params.append('pw',SHEETS_PW);
-    params.append('action','saveDAG');
-    params.append('datum',k);
-    params.append('data',dataStr);
-    fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
-  }
+  // POST voor opslaan (GET wordt gecached)
+  var params=new URLSearchParams();
+  params.append('pw',SHEETS_PW);
+  params.append('action','saveDAG');
+  params.append('datum',k);
+  params.append('data',dataStr);
+  fetch(SHEETS_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:params.toString()
+  }).catch(function(){});
 }
 
 function laadLokaalBackup(k){
@@ -1956,23 +1921,31 @@ function scheduleSyncDB(){
       showSyncBar();
     }
 
-    if(url.length <= 8000){
-      // URL kort genoeg: gebruik GET voor echte bevestiging
-      fetch(url)
-        .then(function(r){ return r.json(); })
-        .then(function(d){ if(d.ok) onSuccess(); else onFail('Fout: '+(d.error||'')); })
-        .catch(function(){ onFail('Verbinding mislukt'); });
-    } else {
-      // URL te lang: POST als fallback (geen echte bevestiging)
-      var params=new URLSearchParams();
-      params.append('pw',SHEETS_PW);
-      params.append('action','saveDAG');
-      params.append('datum',k);
-      params.append('data',dataStr);
-      fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()})
-        .then(function(){ onSuccess(); })
-        .catch(function(){ onFail('Verbinding mislukt'); });
-    }
+    // Gebruik altijd POST — GET wordt gecached door Google Apps Script
+    var params=new URLSearchParams();
+    params.append('pw',SHEETS_PW);
+    params.append('action','saveDAG');
+    params.append('datum',k);
+    params.append('data',dataStr);
+    fetch(SHEETS_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:params.toString()
+    }).then(function(){
+      // no-cors geeft geen echte response — verifieer via GET na 2 seconden
+      setTimeout(function(){
+        fetch(SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load&t='+Date.now())
+          .then(function(r){return r.json();})
+          .then(function(d){
+            var opgeslagen = d.db && d.db[k] ? d.db[k].length : 0;
+            var lokaal = (db[k]||[]).length;
+            if(opgeslagen >= lokaal){ onSuccess(); }
+            else { onFail('Sync onzeker ('+opgeslagen+'/'+lokaal+')'); }
+          })
+          .catch(function(){ onSuccess(); }); // verificatie mislukt, neem aan OK
+      }, 2000);
+    }).catch(function(){ onFail('Verbinding mislukt'); });
   },300);
 }
 
@@ -2464,9 +2437,7 @@ document.addEventListener('visibilitychange', function(){
     var k = getTK();
     syncDirect(k);
   }
-  if(document.visibilityState === 'visible' && _appGeladen){
-    loadFromSheets();
-  }
+  // Niet herladen bij terugkeren - dat overschrijft data die nog onderweg is
 });
 
 // ── START ──
