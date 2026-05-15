@@ -442,6 +442,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 //  CONFIGURATIE — pas dit aan voordat je deployt
 // ══════════════════════════════════════════════════════════
 
+// Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
 // Stap 1: Ga naar https://emn178.github.io/online-tools/sha256.html
 // Stap 2: Typ je wachtwoord in en kopieer de hash
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
@@ -979,7 +980,7 @@ function addEntry(){
   if(vrP&&vrP.qty!==99) vrP.qty=Math.max(0,vrP.qty-aantalVr);
   if(dvP) scheduleSync('saveDV',dv);
   if(vrP) scheduleSync('saveVR',vr);
-  clrForm();upd();scheduleSyncDB();
+  clrForm();upd();slaLokaalOp();syncDirect(k);scheduleSyncDB();
 }
 function clrForm(){
   ['f-desc','f-por','f-kcal','f-ei','f-kh','f-vet','f-vez','f-vocht','f-note'].forEach(id=>{var e=document.getElementById(id);if(e)e.value='';});
@@ -1013,7 +1014,7 @@ function delE(k,i){
   if(vrP&&vrP.qty!==99) vrP.qty=vrP.qty+aantalVr;
   if(dvP) scheduleSync('saveDV',dv);
   if(vrP) scheduleSync('saveVR',vr);
-  upd();scheduleSyncDB();
+  upd();slaLokaalOp();var delK=getTK();syncDirect(delK);scheduleSyncDB();
 }
 
 function pbar(v,mx,c){const p=Math.min(100,Math.round(v/mx*100));return `<div class="pbar"><div class="pfill" style="width:${p}%;background:${c}"></div></div>`;}
@@ -1785,11 +1786,28 @@ function loadFromSheets(){
       // Sheets data wint altijd — START_DB alleen voor dagen die nog niet in Sheets staan
       // Laad data - overschrijf alleen als Sheets meer/nieuwere data heeft
       if(data.db){
-        // Merge: behoud lokale dagen die Sheets niet kent
         var merged = Object.assign({},START_DB,data.db);
+        // Merge: behoud lokale dagen die Sheets niet kent
         Object.keys(db).forEach(function(k){
           if(!data.db[k] && db[k] && db[k].length) merged[k] = db[k];
         });
+        // Gebruik lokale backup als Sheets vandaag leeg heeft maar backup bestaat
+        var vandaag = getTK();
+        if((!data.db[vandaag] || data.db[vandaag].length === 0)){
+          var backup = laadLokaalBackup(vandaag);
+          if(backup && backup.length > 0){
+            merged[vandaag] = backup;
+            // Stuur backup meteen naar Sheets
+            setTimeout(function(){
+              var params=new URLSearchParams();
+              params.append('pw',SHEETS_PW);
+              params.append('action','saveDAG');
+              params.append('datum',vandaag);
+              params.append('data',JSON.stringify(backup));
+              fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params.toString()});
+            }, 2000);
+          }
+        }
         db = merged;
       } else {
         db = Object.assign({},START_DB);
@@ -1851,20 +1869,58 @@ var dbSaveTimer=null;
 var _dbSaveRetries={};
 
 var dbSaveTimer=null;
+function slaLokaalOp(){
+  try {
+    var vandaag = getTK();
+    localStorage.setItem('vd-db-' + vandaag, JSON.stringify(db[vandaag]||[]));
+    localStorage.setItem('vd-db-datum', vandaag);
+  } catch(e) {}
+}
+
+function syncDirect(k){
+  // Stuur data direct zonder vertraging — voor kritieke momenten
+  if(!SHEETS_URL || !_appGeladen) return;
+  var entries_json = JSON.stringify(db[k]||[]);
+  var params = new URLSearchParams();
+  params.append('pw', SHEETS_PW);
+  params.append('action', 'saveDAG');
+  params.append('datum', k);
+  params.append('data', entries_json);
+  fetch(SHEETS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: params.toString()
+  });
+}
+
+function laadLokaalBackup(k){
+  // Laad lokale backup als Sheets geen data heeft voor deze dag
+  try {
+    var lokaal = localStorage.getItem('vd-db-' + k);
+    if(lokaal){
+      var parsed = JSON.parse(lokaal);
+      if(parsed && parsed.length > 0) return parsed;
+    }
+  } catch(e) {}
+  return null;
+}
+
 function scheduleSyncDB(){
   if(!SHEETS_URL)return;
   if(!_appGeladen){
-    // App nog niet geladen — wacht tot data binnen is voor we gaan opslaan
     setTimeout(scheduleSyncDB, 500);
     return;
   }
   var k=getTK();
   var entries=db[k]||[];
+  // Sla altijd lokaal op als backup
+  slaLokaalOp();
   clearTimeout(dbSaveTimer);
   _pendingSyncs++;
   dbSaveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
-    var entries_json=JSON.stringify(entries);
+    var entries_json=JSON.stringify(db[k]||[]);
     var params=new URLSearchParams();
     params.append('pw', SHEETS_PW);
     params.append('action', 'saveDAG');
@@ -1887,7 +1943,7 @@ function scheduleSyncDB(){
       syncStatus.error='Dagboek sync mislukt — controleer verbinding';
       showSyncBar();
     });
-  },1500);
+  },300);
 }
 
 // ── BEWERK GEWICHT ──
@@ -2368,6 +2424,19 @@ function slaModalOp(){
 document.addEventListener('click', function(e){
   var m=document.getElementById('bewerk-modal');
   if(m && e.target===m) sluitModal();
+});
+
+// Sync direct als app terug naar voorgrond komt (bijv. na achtergrond op iPhone)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'hidden' && _appGeladen){
+    // App gaat naar achtergrond — sla direct op
+    slaLokaalOp();
+    var k = getTK();
+    syncDirect(k);
+  }
+  if(document.visibilityState === 'visible' && _appGeladen){
+    loadFromSheets();
+  }
 });
 
 // ── START ──
