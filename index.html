@@ -1878,20 +1878,24 @@ function slaLokaalOp(){
 }
 
 function syncDirect(k){
-  // Stuur data direct zonder vertraging — voor kritieke momenten
+  // Gebruik GET voor dagboek — geeft echte response, geen no-cors probleem
   if(!SHEETS_URL || !_appGeladen) return;
-  var entries_json = JSON.stringify(db[k]||[]);
-  var params = new URLSearchParams();
-  params.append('pw', SHEETS_PW);
-  params.append('action', 'saveDAG');
-  params.append('datum', k);
-  params.append('data', entries_json);
-  fetch(SHEETS_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: params.toString()
-  });
+  var entries = db[k]||[];
+  var url = SHEETS_URL
+    + '?pw=' + encodeURIComponent(SHEETS_PW)
+    + '&action=saveDAG'
+    + '&datum=' + encodeURIComponent(k)
+    + '&data=' + encodeURIComponent(JSON.stringify(entries));
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.ok){
+        syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+        syncStatus.error=null;
+        showSyncBar();
+      }
+    })
+    .catch(function(){});
 }
 
 function laadLokaalBackup(k){
@@ -1920,29 +1924,31 @@ function scheduleSyncDB(){
   _pendingSyncs++;
   dbSaveTimer=setTimeout(function(){
     syncStatus.saving=true;showSyncBar();
-    var entries_json=JSON.stringify(db[k]||[]);
-    var params=new URLSearchParams();
-    params.append('pw', SHEETS_PW);
-    params.append('action', 'saveDAG');
-    params.append('datum', k);
-    params.append('data', entries_json);
-    fetch(SHEETS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: params.toString()
-    }).then(function(){
-      _pendingSyncs=Math.max(0,_pendingSyncs-1);
-      syncStatus.saving=false;
-      syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-      syncStatus.error=null;
-      showSyncBar();
-    }).catch(function(){
-      _pendingSyncs=Math.max(0,_pendingSyncs-1);
-      syncStatus.saving=false;
-      syncStatus.error='Dagboek sync mislukt — controleer verbinding';
-      showSyncBar();
-    });
+    var entries = db[k]||[];
+    var url = SHEETS_URL
+      + '?pw=' + encodeURIComponent(SHEETS_PW)
+      + '&action=saveDAG'
+      + '&datum=' + encodeURIComponent(k)
+      + '&data=' + encodeURIComponent(JSON.stringify(entries));
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        _pendingSyncs=Math.max(0,_pendingSyncs-1);
+        syncStatus.saving=false;
+        if(d.ok){
+          syncStatus.lastSaved=new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+          syncStatus.error=null;
+        } else {
+          syncStatus.error='Sync fout: '+(d.error||'onbekend');
+        }
+        showSyncBar();
+      })
+      .catch(function(){
+        _pendingSyncs=Math.max(0,_pendingSyncs-1);
+        syncStatus.saving=false;
+        syncStatus.error='Dagboek sync mislukt — controleer verbinding';
+        showSyncBar();
+      });
   },300);
 }
 
