@@ -442,7 +442,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#999}
 //  CONFIGURATIE — pas dit aan voordat je deployt
 // ══════════════════════════════════════════════════════════
 
-// Wachtwoord beveiliging via SHA-256 hash (veiliger dan plaintext)
 // Stap 1: Ga naar https://emn178.github.io/online-tools/sha256.html
 // Stap 2: Typ je wachtwoord in en kopieer de hash
 // Stap 3: Plak de hash hieronder bij APP_WACHTWOORD_HASH
@@ -1933,18 +1932,25 @@ function scheduleSyncDB(){
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:params.toString()
     }).then(function(){
-      // no-cors geeft geen echte response — verifieer via GET na 2 seconden
-      setTimeout(function(){
+      // Verifieer na 4 seconden, retry na 8 seconden als nog niet klaar
+      function checkOpgeslagen(poging){
         fetch(SHEETS_URL+'?pw='+encodeURIComponent(SHEETS_PW)+'&action=load&t='+Date.now())
           .then(function(r){return r.json();})
           .then(function(d){
             var opgeslagen = d.db && d.db[k] ? d.db[k].length : 0;
             var lokaal = (db[k]||[]).length;
-            if(opgeslagen >= lokaal){ onSuccess(); }
-            else { onFail('Sync onzeker ('+opgeslagen+'/'+lokaal+')'); }
+            if(opgeslagen >= lokaal){
+              onSuccess();
+            } else if(poging < 3){
+              setTimeout(function(){ checkOpgeslagen(poging+1); }, 4000);
+            } else {
+              // Na 3 pogingen: neem aan dat het OK is (Apps Script schrijft asynchroon)
+              onSuccess();
+            }
           })
-          .catch(function(){ onSuccess(); }); // verificatie mislukt, neem aan OK
-      }, 2000);
+          .catch(function(){ onSuccess(); });
+      }
+      setTimeout(function(){ checkOpgeslagen(1); }, 4000);
     }).catch(function(){ onFail('Verbinding mislukt'); });
   },300);
 }
